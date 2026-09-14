@@ -6,8 +6,8 @@ export async function onRequestPut({ params, request, env }) {
   const body = await request.json().catch(() => null);
   if (!body) return new Response("JSON non valido", { status: 400 });
 
-  const { title, description, startDate, endDate, imageKey, participants, poll } = body;
-  if (!title || !startDate || !endDate) {
+  const { title, description, start_date, end_date, image_key, participants, poll } = body;
+  if (!title || !start_date || !end_date) {
     return new Response("Titolo e date sono obbligatori", { status: 400 });
   }
 
@@ -16,7 +16,7 @@ export async function onRequestPut({ params, request, env }) {
      SET title = ?, description = ?, start_date = ?, end_date = ?, image_key = COALESCE(?, image_key)
      WHERE id = ?`
   )
-    .bind(title, description || "", startDate, endDate, imageKey || null, params.id)
+    .bind(title, description || "", start_date, end_date, image_key || null, params.id)
     .run();
 
   // Sostituisce la lista partecipanti
