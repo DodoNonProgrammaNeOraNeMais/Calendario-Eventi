@@ -1,16 +1,13 @@
 export async function onRequestPost(context) {
   try {
     const { env, request } = context;
-
-    if (!env.DB) {
-      return new Response(JSON.stringify({ error: "Manca il binding DB in env!" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     const body = await request.json();
-    const { title, description, start_date, end_date, image_url } = body;
+
+    const title = body.title ?? null;
+    const description = body.description ?? null;
+    const start_date = body.start_date ?? null;
+    const end_date = body.end_date ?? null;
+    const image_url = body.image_url ?? null;
 
     const result = await env.DB.prepare(
       `INSERT INTO Events (title, description, start_date, end_date, image_url) 
