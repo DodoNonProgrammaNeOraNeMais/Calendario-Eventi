@@ -18,7 +18,6 @@ export async function onRequestPost({ request, env }) {
 
   const { token, isNew } = getOrCreateVoterToken(request);
 
-  // Recupera il nome precedente se l'utente aveva già votato
   const existingVote = await env.DB.prepare(`SELECT voter_name FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
   
   let voterName = body.voterName ? body.voterName.trim() : null;
@@ -29,13 +28,25 @@ export async function onRequestPost({ request, env }) {
     return new Response("Il nome è obbligatorio per votare", { status: 400 });
   }
 
-  await env.DB.prepare(
-    `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
-     ON CONFLICT(poll_id, voter_token)
-     DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now')`
-  )
-    .bind(body.pollId, body.optionId, token, voterName)
-    .run();
+  // Verifica se esiste già un voto per questo sondaggio con lo stesso nome (case-insensitive)
+  const existingByName = await env.DB.prepare(
+    `SELECT * FROM votes WHERE poll_id = ? AND LOWER(voter_name) = LOWER(?)`
+  ).bind(body.pollId, voterName).first();
+
+  if (existingByName) {
+    // Aggiorna il voto esistente (aggiornando anche il token così il browser viene ri-associato)
+    await env.DB.prepare(
+      `UPDATE votes SET option_id = ?, voter_name = ?, voter_token = ?, created_at = datetime('now') WHERE id = ?`
+    ).bind(body.optionId, voterName, token, existingByName.id).run();
+  } else {
+    await env.DB.prepare(
+      `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
+       ON CONFLICT(poll_id, voter_token)
+       DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now')`
+    )
+      .bind(body.pollId, body.optionId, token, voterName)
+      .run();
+  }
 
   const headers = new Headers({ "Content-Type": "application/json" });
   if (isNew) {
