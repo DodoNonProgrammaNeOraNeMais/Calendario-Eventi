@@ -99,13 +99,18 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       .map((o) => {
         const pct = Math.round((o.votes / totalVotes) * 100);
         const selected = event.poll.myOptionId === o.id;
+        
+        // Nuova riga per mostrare la lista di chi ha votato (se ci sono voti)
+        const votersListHtml = o.voters ? `<div class="poll-voters-list" style="font-size: 0.85rem; color: #666; margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>` : "";
+
         return `
-        <div class="poll-option ${selected ? "selected" : ""}">
+        <div class="poll-option ${selected ? "selected" : ""}" style="margin-bottom: 1rem;">
           <div class="bar-wrap">
             <div class="bar-label"><span>${escapeHtml(o.label)}${selected ? " (il tuo voto)" : ""}</span><span>${o.votes}</span></div>
             <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           </div>
-          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}">${selected ? "Cambia" : "Vota"}</button>` : ""}
+          ${votersListHtml}
+          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}" style="margin-top: 8px;">${selected ? "Cambia" : "Vota"}</button>` : ""}
         </div>`;
       })
       .join("");
@@ -113,10 +118,18 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     pollHtml = `
       <div class="poll-box">
         <h3>${escapeHtml(event.poll.question)}</h3>
+        ${
+          event.poll.isOpen && !event.poll.myOptionId
+            ? `<div style="margin-bottom: 1rem;">
+                 <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Il tuo nome per votare:</label>
+                 <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+               </div>`
+            : ""
+        }
         ${optionsHtml}
         ${
           event.poll.isOpen
-            ? `<div class="poll-deadline">Puoi votare fino al ${formatDeadline(event.poll.deadline)}</div>
+            ? `<div class="poll-deadline" style="margin-top: 1rem;">Puoi votare fino al ${formatDeadline(event.poll.deadline)}</div>
                ${event.poll.myOptionId ? `<button type="button" data-remove-vote class="secondary" style="margin-top:0.6rem;">Ritira il voto</button>` : ""}`
             : `<div class="poll-closed-note">Sondaggio chiuso</div>`
         }
@@ -142,12 +155,31 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
 
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      // Se l'utente non ha ancora votato, leggiamo il nome dall'input
+      let voterName = null;
+      if (!event.poll.myOptionId) {
+        const nameInput = wrap.querySelector("#voter-name-input");
+        voterName = nameInput ? nameInput.value.trim() : "";
+        if (!voterName) {
+          showToast("Inserisci il tuo nome per votare!");
+          nameInput.focus();
+          return;
+        }
+      } else {
+        // Se sta cambiando voto e l'input non c'è, passiamo un valore convenzionale
+        voterName = "Cambio Voto"; 
+      }
+
       btn.disabled = true;
       try {
         const res = await fetch("/api/votes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pollId: event.poll.id, optionId: Number(btn.dataset.voteOption) }),
+          body: JSON.stringify({ 
+            pollId: event.poll.id, 
+            optionId: Number(btn.dataset.voteOption),
+            voterName: voterName 
+          }),
         });
         if (!res.ok) throw new Error(await res.text());
         onVoteChange && onVoteChange();
