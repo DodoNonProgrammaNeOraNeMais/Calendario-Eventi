@@ -1,5 +1,4 @@
-// Funzioni condivise tra le pagine pubbliche (calendario, prossimi eventi, pagina singolo evento)
-
+// Funzioni condivise tra le pagine pubbliche
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -9,7 +8,6 @@ function isoDate(d) {
 }
 
 function parseIsoDate(s) {
-  // interpretata come mezzanotte locale per evitare scarti di fuso orario
   const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
@@ -54,7 +52,7 @@ async function shareEvent(event) {
       await navigator.share({ title: event.title, text: event.title, url });
       return;
     } catch (e) {
-      if (e.name === "AbortError") return; // l'utente ha annullato, nessun errore da mostrare
+      if (e.name === "AbortError") return;
     }
   }
   try {
@@ -75,8 +73,6 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 2500);
 }
 
-// Costruisce il contenuto del dettaglio evento: immagine, date, descrizione, partecipanti, sondaggio, azioni.
-// onVoteChange() viene richiamata dopo un voto o un ritiro voto per ricaricare i dati aggiornati.
 function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "modal-wrap";
@@ -99,8 +95,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       .map((o) => {
         const pct = Math.round((o.votes / totalVotes) * 100);
         const selected = event.poll.myOptionId === o.id;
-        
-        // Nuova riga per mostrare la lista di chi ha votato (se ci sono voti)
         const votersListHtml = o.voters ? `<div class="poll-voters-list" style="font-size: 0.85rem; color: #666; margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>` : "";
 
         return `
@@ -155,19 +149,17 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
 
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      // Se l'utente non ha ancora votato, leggiamo il nome dall'input
       let voterName = null;
       if (!event.poll.myOptionId) {
         const nameInput = wrap.querySelector("#voter-name-input");
         voterName = nameInput ? nameInput.value.trim() : "";
         if (!voterName) {
           showToast("Inserisci il tuo nome per votare!");
-          nameInput.focus();
+          if (nameInput) nameInput.focus();
           return;
         }
       } else {
-        // Se sta cambiando voto e l'input non c'è, passiamo un valore convenzionale
-        voterName = "Cambio Voto"; 
+        voterName = null; 
       }
 
       btn.disabled = true;
@@ -208,7 +200,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   return wrap;
 }
 
-// Apre il dettaglio di un evento in una finestra modale sopra la pagina corrente.
 function openEventModal(slug) {
   const root = document.getElementById("modal-root");
 
