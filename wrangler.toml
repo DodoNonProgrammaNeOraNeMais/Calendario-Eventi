@@ -1,14 +1,3 @@
 name = "calendario-eventi"
 compatibility_date = "2026-01-01"
-
-[assets]
-directory = "public"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "calendario-eventi-db"
-database_id = "76378d69-8e6e-4e78-bb2d-c6180be693fc"
-
-[[r2_buckets]]
-binding = "IMAGES"
-bucket_name = "calendario-eventi-immagini"
+pages_build_output_dir = "public"
