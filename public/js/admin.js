@@ -105,12 +105,12 @@ form.addEventListener("submit", async (e) => {
     poll = { question, deadline: new Date(deadlineValue).toISOString(), options };
   }
 
-  const payload = {
+ const payload = {
     title,
     description,
-    startDate,
-    endDate,
-    imageKey: uploadedImageKey,
+    start_date: startDate,
+    end_date: endDate,
+    image_key: uploadedImageKey,
     participants,
     poll,
   };
