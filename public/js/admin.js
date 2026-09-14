@@ -94,18 +94,34 @@ form.addEventListener("submit", async (e) => {
   }
 
   let poll = null;
-  if (document.getElementById("poll-toggle").checked) {
-    const question = document.getElementById("poll-question").value.trim();
-    const deadlineValue = document.getElementById("poll-deadline").value;
-    const options = Array.from(document.querySelectorAll("#poll-options input")).map((i) => i.value.trim()).filter(Boolean);
+  const pollToggle = document.getElementById("poll-toggle");
+  if (pollToggle && pollToggle.checked) {
+    const questionEl = document.getElementById("poll-question");
+    const deadlineEl = document.getElementById("poll-deadline");
+    const question = questionEl ? questionEl.value.trim() : "";
+    const deadlineValue = deadlineEl ? deadlineEl.value : "";
+    const optionInputs = Array.from(document.querySelectorAll("#poll-options input"));
+    const options = optionInputs.map((i) => i.value.trim()).filter(Boolean);
+
     if (!question || !deadlineValue || options.length < 2) {
       showToast("Completa domanda, scadenza e almeno due opzioni del sondaggio");
       return;
     }
-    poll = { question, deadline: new Date(deadlineValue).toISOString(), options };
+
+    const deadlineDate = new Date(deadlineValue);
+    if (isNaN(deadlineDate.getTime())) {
+      showToast("La data di scadenza del sondaggio non e' valida");
+      return;
+    }
+
+    poll = {
+      question: question,
+      deadline: deadlineDate.toISOString(),
+      options: options,
+    };
   }
 
- const payload = {
+  const payload = {
     title,
     description,
     start_date: startDate,
@@ -238,3 +254,34 @@ async function deleteEvent(id) {
 }
 
 loadAdminEvents();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("app");
+  if (!root) return;
+  const slug = root.dataset.slug;
+  if (!slug) return;
+
+  const topbar = document.createElement("header");
+  topbar.className = "topbar";
+  topbar.innerHTML = `<a class="brand" href="/">Calendario eventi</a>`;
+  document.body.prepend(topbar);
+
+  const container = document.createElement("div");
+  container.id = "event-container";
+  root.appendChild(container);
+
+  async function load() {
+    try {
+      const event = await apiGet(`/api/events/${slug}`);
+      container.innerHTML = "";
+      const card = document.createElement("div");
+      card.className = "modal standalone-card";
+      card.appendChild(renderEventDetail(event, load, { showClose: false }));
+      container.appendChild(card);
+    } catch (e) {
+      container.innerHTML = `<p class="empty-state">Evento non trovato.</p>`;
+    }
+  }
+
+  load();
+});
