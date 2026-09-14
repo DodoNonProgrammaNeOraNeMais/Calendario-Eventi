@@ -181,6 +181,9 @@ async function loadAdminEvents() {
         <div class="dates">${formatDateRange(e.start_date, e.end_date)}</div>
       </div>
       <div class="row-actions">
+        <a href="/evento/${e.slug}" target="_blank" style="text-decoration: none;">
+          <button type="button" class="secondary">Vedi Evento</button>
+        </a>
         <button type="button" class="secondary" data-edit="${e.id}" data-slug="${e.slug}">Modifica</button>
         <button type="button" class="danger" data-delete="${e.id}">Elimina</button>
       </div>`;
@@ -198,7 +201,7 @@ async function loadAdminEvents() {
 async function startEdit(id, slug) {
   const event = await apiGet(`/api/events/${slug}`);
   editingId = id;
-  uploadedImageKey = null; // se non viene caricata una nuova immagine, il server mantiene quella attuale
+  uploadedImageKey = null;
 
   document.getElementById("title").value = event.title;
   document.getElementById("start-date").value = event.start_date;
