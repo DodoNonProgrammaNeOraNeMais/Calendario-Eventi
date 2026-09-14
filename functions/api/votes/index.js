@@ -1,4 +1,4 @@
-// POST /api/votes { pollId, optionId } -> vota o cambia voto
+// POST /api/votes { pollId, optionId, voterName } -> vota o cambia voto
 // DELETE /api/votes?pollId=... -> ritira il voto
 //
 // Non serve un account: al primo voto viene creato un cookie anonimo (voter_id)
@@ -9,6 +9,11 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => null);
   if (!body || !body.pollId || !body.optionId) {
     return new Response("Dati mancanti", { status: 400 });
+  }
+
+  const voterName = body.voterName ? body.voterName.trim() : null;
+  if (!voterName) {
+    return new Response("Il nome è obbligatorio per votare", { status: 400 });
   }
 
   const poll = await env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
@@ -29,11 +34,11 @@ export async function onRequestPost({ request, env }) {
   const { token, isNew } = getOrCreateVoterToken(request);
 
   await env.DB.prepare(
-    `INSERT INTO votes (poll_id, option_id, voter_token) VALUES (?, ?, ?)
+    `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
      ON CONFLICT(poll_id, voter_token)
-     DO UPDATE SET option_id = excluded.option_id, created_at = datetime('now')`
+     DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now')`
   )
-    .bind(body.pollId, body.optionId, token)
+    .bind(body.pollId, body.optionId, token, voterName)
     .run();
 
   const headers = new Headers({ "Content-Type": "application/json" });
