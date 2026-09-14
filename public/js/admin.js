@@ -68,6 +68,10 @@ function resetForm() {
   resetOptions();
   document.getElementById("submit-btn").textContent = "Crea evento";
   document.getElementById("cancel-edit").style.display = "none";
+  
+  const votesContainer = document.getElementById("admin-votes-container");
+  if (votesContainer) votesContainer.remove();
+  
   banner.innerHTML = "";
 }
 
@@ -220,12 +224,33 @@ async function startEdit(id, slug) {
   }
 
   document.getElementById("poll-options").innerHTML = "";
+  
+  let votesContainer = document.getElementById("admin-votes-container");
+  if (!votesContainer) {
+    votesContainer = document.createElement("div");
+    votesContainer.id = "admin-votes-container";
+    votesContainer.style.marginTop = "20px";
+    document.getElementById("poll-fields").appendChild(votesContainer);
+  }
+  votesContainer.innerHTML = "";
+
   if (event.poll) {
     document.getElementById("poll-toggle").checked = true;
     document.getElementById("poll-fields").style.display = "block";
     document.getElementById("poll-question").value = event.poll.question;
     document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
     event.poll.options.forEach((o) => addOptionRow(o.label));
+
+    if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
+      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Voti Ricevuti (Gestione)</h4>`;
+      event.poll.detailedVotes.forEach(v => {
+        const row = document.createElement("div");
+        row.style.marginBottom = "8px";
+        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato: <i>${escapeHtml(v.option_label)}</i> 
+                         <button type="button" class="danger" style="padding:2px 6px; margin-left:10px; font-size:12px;" onclick="deleteVote(${v.vote_id}, '${slug}')">Rifiuta</button>`;
+        votesContainer.appendChild(row);
+      });
+    }
   } else {
     document.getElementById("poll-toggle").checked = false;
     document.getElementById("poll-fields").style.display = "none";
@@ -253,6 +278,18 @@ async function deleteEvent(id) {
     loadAdminEvents();
   } catch (err) {
     showToast("Non e' stato possibile eliminare l'evento");
+  }
+}
+
+window.deleteVote = async function(voteId, slug) {
+  if (!confirm("Vuoi rifiutare e annullare questo voto?")) return;
+  try {
+    const res = await fetch(`/api/admin/votes/${voteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error("Errore");
+    showToast("Voto rimosso con successo");
+    startEdit(editingId, slug); 
+  } catch(e) {
+    showToast("Errore durante l'eliminazione");
   }
 }
 
