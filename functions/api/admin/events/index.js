@@ -1,28 +1,53 @@
-export async function onRequestPost(context) {
+export async function onRequestPost({ request, env }) {
   try {
-    const { env, request } = context;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) return new Response("JSON non valido", { status: 400 });
 
-    const title = body.title ?? null;
-    const description = body.description ?? null;
-    const start_date = body.start_date ?? null;
-    const end_date = body.end_date ?? null;
-    const image_key = body.image_key ?? null;
+    const { title, description, start_date, end_date, image_key, participants, poll } = body;
+    if (!title || !start_date || !end_date) {
+      return new Response("Titolo e date sono obbligatori", { status: 400 });
+    }
 
     const id = crypto.randomUUID();
-    const slug = `${title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'evento'}-${Date.now().toString().slice(-4)}`;
+    const slugBase = title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const slug = `${slugBase || "evento"}-${id.slice(0, 6)}`;
 
-    const result = await env.DB.prepare(
-      `INSERT INTO events (id, slug, title, description, image_key, start_date, end_date) 
-       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`
+    await env.DB.prepare(
+      `INSERT INTO events (id, slug, title, description, start_date, end_date, image_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, slug, title, description, image_key, start_date, end_date)
-      .first();
+      .bind(id, slug, title, description || "", start_date, end_date, image_key || null)
+      .run();
 
-    return new Response(JSON.stringify({ success: true, event: result }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+    if (Array.isArray(participants) && participants.length) {
+      const clean = participants.map((n) => n.trim()).filter(Boolean);
+      if (clean.length) {
+        const stmt = env.DB.prepare(`INSERT INTO participants (event_id, name) VALUES (?, ?)`);
+        await env.DB.batch(clean.map((name) => stmt.bind(id, name)));
+      }
+    }
+
+    const options = poll && Array.isArray(poll.options) ? poll.options.map((o) => o.trim()).filter(Boolean) : [];
+    const wantsPoll = poll && poll.question && poll.deadline && options.length >= 2;
+
+    if (wantsPoll) {
+      const pollId = crypto.randomUUID();
+      await env.DB.prepare(
+        `INSERT INTO polls (id, event_id, question, deadline) VALUES (?, ?, ?, ?)`
+      )
+        .bind(pollId, id, poll.question, poll.deadline)
+        .run();
+
+      const stmt = env.DB.prepare(`INSERT INTO poll_options (poll_id, label) VALUES (?, ?)`);
+      await env.DB.batch(options.map((label) => stmt.bind(pollId, label)));
+    }
+
+    return Response.json({ ok: true, id, slug });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
