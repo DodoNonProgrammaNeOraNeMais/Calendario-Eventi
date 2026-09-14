@@ -7,13 +7,16 @@ export async function onRequestPost(context) {
     const description = body.description ?? null;
     const start_date = body.start_date ?? null;
     const end_date = body.end_date ?? null;
-    const image_url = body.image_url ?? null;
+    const image_key = body.image_key ?? null;
+
+    const id = crypto.randomUUID();
+    const slug = `${title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'evento'}-${Date.now().toString().slice(-4)}`;
 
     const result = await env.DB.prepare(
-      `INSERT INTO Events (title, description, start_date, end_date, image_url) 
-       VALUES (?, ?, ?, ?, ?) RETURNING id`
+      `INSERT INTO events (id, slug, title, description, image_key, start_date, end_date) 
+       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`
     )
-      .bind(title, description, start_date, end_date, image_url)
+      .bind(id, slug, title, description, image_key, start_date, end_date)
       .first();
 
     return new Response(JSON.stringify({ success: true, event: result }), {
