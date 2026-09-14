@@ -7,7 +7,7 @@ directory = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "calendario-eventi-db"
-database_id = "INCOLLA_QUI_IL_TUO_DATABASE_ID"
+database_id = "76378d69-8e6e-4e78-bb2d-c6180be693fc"
 
 [[r2_buckets]]
 binding = "IMAGES"
