@@ -1,0 +1,17 @@
+name = "calendario-eventi"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "public"
+
+# Database D1 - dopo aver creato il database con:
+#   npx wrangler d1 create calendario-eventi-db
+# copia il database_id restituito qui sotto
+[[d1_databases]]
+binding = "DB"
+database_name = "calendario-eventi-db"
+database_id = "INCOLLA_QUI_IL_TUO_DATABASE_ID"
+
+# Bucket R2 per le immagini - dopo averlo creato con:
+#   npx wrangler r2 bucket create calendario-eventi-immagini
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "calendario-eventi-immagini"
