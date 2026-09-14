@@ -455,8 +455,8 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 .date-row > div { flex: 1; }
 
 .image-drop {
-  border: 2px dashed #cfc9f8;
-  background: #faf9ff;
+  border: 2px dashed #d3cec3;
+  background: #ffffff;
   border-radius: var(--radius-sm);
   padding: 1.4rem;
   text-align: center; cursor: pointer;
