@@ -164,7 +164,6 @@ function setupImageUpload() {
 
   if (!dropZone) return;
 
-  // Crea l'input file invisibile se non è presente nell'HTML
   if (!fileInput) {
     fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -183,7 +182,8 @@ function setupImageUpload() {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    // Usa 'image' per essere compatibile con l'API backend /upload
+    formData.append('image', file);
 
     try {
       dropZone.textContent = 'Caricamento in corso...';
@@ -192,7 +192,10 @@ function setupImageUpload() {
         body: formData
       });
 
-      if (!res.ok) throw new Error('Errore durante il caricamento');
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Errore durante il caricamento');
+      }
 
       const data = await res.json();
       const imageUrl = data.url || data.imageUrl || data.key;
@@ -216,7 +219,7 @@ function setupFormListeners() {
   const form = document.getElementById('event-form');
   if (form) {
     form.addEventListener('submit', async (e) => {
-      // Mantiene la normale sottomissione del form evento
+      // Form di salvataggio eventi predefinito
     });
   }
 }
