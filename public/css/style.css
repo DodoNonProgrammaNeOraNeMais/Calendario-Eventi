@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA DEFINITIVO (Bosco Alpino + Montagne Responsive)
+   TEMA MONTAGNA DEFINITIVO (Curve Topografiche + Montagne)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -41,6 +41,7 @@ html {
   background: var(--bg);
 }
 
+/* Sfondo della pagina con linee di livello topografiche stile mappa escursionistica */
 body {
   position: relative;
   isolation: isolate;
@@ -49,17 +50,21 @@ body {
   padding: 0;
   color: var(--ink);
   background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='760' height='560' viewBox='0 0 760 560'%3E%3Cg fill='none' stroke='%23747a73' stroke-width='1.15' opacity='.16'%3E%3Cpath d='M-40 118c88-75 180-79 257-19 80 62 178 62 257-2 76-61 173-59 286 28'/%3E%3Cpath d='M-48 154c96-81 197-87 282-20 79 62 164 61 244-3 83-67 183-64 302 30'/%3E%3Cpath d='M-55 193c105-90 216-97 309-24 71 56 146 55 218-3 92-74 201-70 327 35'/%3E%3Cpath d='M-62 238c116-99 239-107 341-27 60 47 124 46 185-3 103-82 222-77 360 39'/%3E%3Cpath d='M60 394c38-45 82-68 131-68 76 0 109 55 164 55 51 0 75-43 132-43 70 0 97 62 160 62 42 0 78-20 113-60'/%3E%3Cpath d='M37 430c46-57 98-84 155-84 78 0 111 55 164 55 50 0 78-42 132-42 69 0 98 62 159 62 49 0 91-24 131-72'/%3E%3Cpath d='M13 470c54-70 114-103 180-103 78 0 111 55 164 55 50 0 78-42 132-42 69 0 98 62 159 62 57 0 105-29 151-86'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 760px 560px;
+  background-attachment: fixed;
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
 }
 
-/* Rimuove lo pseudo-elemento unico per evitare sovrapposizioni o doppie chiamate */
+/* Nessun albero separato */
 body::before {
   display: none !important;
 }
 
-/* Sfondo Montagne + Bosco Alpino realistico ancorato al fondo */
+/* Sagoma montuosa minima e pulita a fine pagina */
 body::after {
   content: "";
   position: fixed;
@@ -67,10 +72,11 @@ body::after {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 240px;
+  height: 190px;
   width: 100%;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 240' preserveAspectRatio='none'%3E%3C!-- Profilo Montagne Sfondo --%3E%3Cpath fill='%23747a73' opacity='.15' d='M0 181l145-74 75 39 144-91 132 114 100-54 115 67 194-132 167 118 92-50 236 89v93H0z'/%3E%3Cpath fill='%234c5550' opacity='.18' d='M0 201l194-75 121 49 183-65 143 75 168-58 162 64 207-91 126 75 116-39v114H0z'/%3E%3C!-- BOSCO SINISTRA --%3E%3C!-- Tronchi Marroni --%3E%3Cpath fill='%2386684f' opacity='.45' d='M38 180h4v60h-4zM83 165h5v75h-5zM128 175h4v65h-4z'/%3E%3C!-- Albero Piccolo Sinistra --%3E%3Cpath fill='%23355246' opacity='.35' d='M40 125l-20 28h8l-22 32h10l-22 35h48l-22-35h10l-22-32h8z'/%3E%3C!-- Albero Grande Sinistra --%3E%3Cpath fill='%23263d34' opacity='.42' d='M85 95l-30 40h12l-32 45h14l-35 50h140l-35-50h14l-32-45h12z'/%3E%3C!-- Albero Medio Sinistra --%3E%3Cpath fill='%23355246' opacity='.38' d='M130 115l-22 32h9l-25 38h11l-28 45h110l-28-45h11l-25-38h9z'/%3E%3C!-- BOSCO DESTRA --%3E%3C!-- Tronchi Marroni --%3E%3Cpath fill='%2386684f' opacity='.45' d='M1278 170h5v70h-5zM1333 155h6v85h-6zM1383 175h4v65h-4z'/%3E%3C!-- Albero Medio Destra --%3E%3Cpath fill='%23355246' opacity='.38' d='M1280 110l-24 35h10l-26 40h12l-28 45h110l-28-45h12l-26-40h10z'/%3E%3C!-- Albero Grande Destra --%3E%3Cpath fill='%23263d34' opacity='.45' d='M1336 80l-32 44h13l-35 50h16l-38 56h152l-38-56h16l-35-50h13z'/%3E%3C!-- Albero Esterno Destra --%3E%3Cpath fill='%23355246' opacity='.32' d='M1385 120l-18 26h7l-20 30h9l-22 34h88l-22-34h9l-20-30h7z'/%3E%3C/svg%3E");
+  opacity: .17;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1420' height='190' viewBox='0 0 1420 190' preserveAspectRatio='none'%3E%3Cpath fill='%23747a73' d='M0 151 145 77l75 39 144-91 132 114 100-54 115 67 194-132 167 118 92-50 236 89v63H0z'/%3E%3Cpath fill='%234c5550' d='m0 171 194-75 121 49 183-65 143 75 168-58 162 64 207-91 126 75 116-39v84H0z' opacity='.78'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -562,8 +568,12 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 /* Tablet */
 @media (max-width: 1023px) {
+  body {
+    background-attachment: scroll;
+    background-size: 620px 457px;
+  }
   body::after {
-    height: 180px;
+    height: 145px;
   }
 }
 
@@ -574,8 +584,8 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 /* Smartphone */
 @media (max-width: 760px) {
   body::after { 
-    height: 120px; 
-    opacity: 0.85; 
+    height: 105px; 
+    opacity: .12; 
   }
   
   .topbar { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding-inline: 1rem; }
@@ -599,6 +609,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 /* Smartphone piccoli */
 @media (max-width: 430px) {
+  body { background-size: 480px 354px; }
   .calendar-grid { gap: 3px; }
   .calendar-weekday { font-size: .65rem; letter-spacing: .02em; }
   .calendar-day { min-height: 56px; }
