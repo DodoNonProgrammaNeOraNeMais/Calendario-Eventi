@@ -73,7 +73,6 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 2500);
 }
 
-/* Funzione globale per aprire l'immagine a schermo intero */
 function openImageFullscreen(url) {
   if (!url) return;
   const existing = document.querySelector(".image-fullscreen-backdrop");
@@ -162,7 +161,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     </div>
   `;
 
-  // Attiva lo zoom fullscreen sull'immagine della modale
   const coverImg = wrap.querySelector("img.cover");
   if (coverImg) {
     coverImg.addEventListener("click", (e) => {
@@ -224,4 +222,31 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   }
 
   return wrap;
+}
+
+function openEventModal(slug) {
+  const root = document.getElementById("modal-root");
+
+  async function load() {
+    const event = await apiGet(`/api/events/${slug}`);
+    root.innerHTML = "";
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    modal.appendChild(renderEventDetail(event, load));
+    backdrop.appendChild(modal);
+    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+    modal.querySelector("[data-close]").addEventListener("click", closeModal);
+    root.appendChild(backdrop);
+  }
+
+  function closeModal() {
+    root.innerHTML = "";
+    document.removeEventListener("keydown", onKey);
+  }
+  function onKey(e) { if (e.key === "Escape") closeModal(); }
+  document.addEventListener("keydown", onKey);
+
+  load().catch(() => showToast("Evento non trovato"));
 }
