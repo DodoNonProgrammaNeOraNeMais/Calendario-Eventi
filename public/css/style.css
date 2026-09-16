@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA DEFINITIVO (Responsive e pulito)
+   TEMA MONTAGNA DEFINITIVO (Montagne + Alberi Responsive)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -54,7 +54,24 @@ body {
   line-height: 1.55;
 }
 
-/* Sfondo Montagne corretto (larghezza 100% senza vuoti) */
+/* Sfondo Alberi (In basso a destra) */
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  right: 1.5rem;
+  bottom: 0;
+  width: 170px;
+  height: 250px;
+  pointer-events: none;
+  opacity: .14;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='250' viewBox='0 0 170 250'%3E%3Cg fill='%23355246'%3E%3Cpath d='M108 8 67 84h24l-39 72h37v76h38v-76h37l-39-72h24z'/%3E%3Cpath d='M41 77 14 128h15L5 174h24v58h25v-58h24l-24-46h15z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: contain;
+}
+
+/* Sfondo Montagne (Larghezza 100% da bordo a bordo) */
 body::after {
   content: "";
   position: fixed;
@@ -558,8 +575,14 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 /* Tablet */
 @media (max-width: 1023px) {
+  body::before {
+    width: 120px;
+    height: 180px;
+    right: 0.75rem;
+    opacity: .10;
+  }
   body::after {
-    height: 145px; /* Riduce l'altezza della montagna sui tablet */
+    height: 145px;
   }
 }
 
@@ -569,7 +592,12 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 /* Smartphone */
 @media (max-width: 760px) {
-  /* Ulteriore riduzione della montagna su schermi piccoli */
+  /* Nasconde gli alberi su mobile per pulizia di lettura */
+  body::before {
+    display: none;
+  }
+  
+  /* Riduce l'altezza delle montagne */
   body::after { 
     height: 105px; 
     opacity: .12; 
@@ -608,7 +636,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
   .event-card img { width: 100%; height: 150px; }
 }
 
-/* Accessibilità (Disattiva animazioni se l'utente preferisce) */
+/* Accessibilità */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
