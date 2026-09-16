@@ -73,6 +73,23 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 2500);
 }
 
+/* Funzione globale per aprire l'immagine a schermo intero */
+function openImageFullscreen(url) {
+  if (!url) return;
+  const existing = document.querySelector(".image-fullscreen-backdrop");
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "image-fullscreen-backdrop";
+  backdrop.innerHTML = `<img src="${url}" alt="Immagine a schermo intero">`;
+  
+  backdrop.addEventListener("click", () => {
+    backdrop.remove();
+  });
+  
+  document.body.appendChild(backdrop);
+}
+
 function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "modal-wrap";
@@ -145,6 +162,15 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     </div>
   `;
 
+  // Attiva lo zoom fullscreen sull'immagine della modale
+  const coverImg = wrap.querySelector("img.cover");
+  if (coverImg) {
+    coverImg.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openImageFullscreen(coverImg.src);
+    });
+  }
+
   wrap.querySelector("[data-share]").addEventListener("click", () => shareEvent(event));
 
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
@@ -198,31 +224,4 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   }
 
   return wrap;
-}
-
-function openEventModal(slug) {
-  const root = document.getElementById("modal-root");
-
-  async function load() {
-    const event = await apiGet(`/api/events/${slug}`);
-    root.innerHTML = "";
-    const backdrop = document.createElement("div");
-    backdrop.className = "modal-backdrop";
-    const modal = document.createElement("div");
-    modal.className = "modal";
-    modal.appendChild(renderEventDetail(event, load));
-    backdrop.appendChild(modal);
-    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
-    modal.querySelector("[data-close]").addEventListener("click", closeModal);
-    root.appendChild(backdrop);
-  }
-
-  function closeModal() {
-    root.innerHTML = "";
-    document.removeEventListener("keydown", onKey);
-  }
-  function onKey(e) { if (e.key === "Escape") closeModal(); }
-  document.addEventListener("keydown", onKey);
-
-  load().catch(() => showToast("Evento non trovato"));
 }
