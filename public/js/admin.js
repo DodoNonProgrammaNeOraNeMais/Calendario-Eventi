@@ -176,7 +176,6 @@ async function loadAdminEvents() {
 
   list.innerHTML = "";
   events.forEach((e) => {
-    // Risoluzione flessibile dell'immagine (URL completo o endpoint /api/images/key)
     let imgSrc = e.image_url;
     if (!imgSrc && e.image_key) {
       imgSrc = e.image_key.startsWith("http") ? e.image_key : `/api/images/${e.image_key}`;
@@ -275,7 +274,9 @@ async function startEdit(id, slug) {
 }
 
 function toLocalDatetimeInputValue(iso) {
+  if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
