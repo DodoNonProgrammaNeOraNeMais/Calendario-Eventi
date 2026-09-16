@@ -124,7 +124,18 @@ function showDayEvents(iso, dayEvents) {
   modal.querySelectorAll("[data-slug]").forEach((el) => el.addEventListener("click", () => openEventModal(el.dataset.slug)));
   root.appendChild(backdrop);
 }
-
+function openImageFullscreen(url) {
+  if (!url) return;
+  const backdrop = document.createElement("div");
+  backdrop.className = "image-fullscreen-backdrop";
+  backdrop.innerHTML = `<img src="${url}" alt="Immagine a schermo intero">`;
+  
+  backdrop.addEventListener("click", () => {
+    backdrop.remove();
+  });
+  
+  document.body.appendChild(backdrop);
+}
 async function loadUpcoming() {
   const list = document.getElementById("upcoming-list");
   list.innerHTML = `<p class="empty-state">Caricamento...</p>`;
