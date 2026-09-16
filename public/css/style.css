@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA DEFINITIVO (Montagne + Bosco Multi-livello)
+   TEMA MONTAGNA DEFINITIVO (Bosco Alpino + Montagne Responsive)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -54,12 +54,12 @@ body {
   line-height: 1.55;
 }
 
-/* Rimuoviamo il vecchio pseudo-elemento per evitare sovrapposizioni o clip */
+/* Rimuove lo pseudo-elemento unico per evitare sovrapposizioni o doppie chiamate */
 body::before {
   display: none !important;
 }
 
-/* Sfondo unico unificato: Montagne + Bosco multi-livello e multi-colore ancorato al fondo */
+/* Sfondo Montagne + Bosco Alpino realistico ancorato al fondo */
 body::after {
   content: "";
   position: fixed;
@@ -67,10 +67,10 @@ body::after {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 220px;
+  height: 240px;
   width: 100%;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 220' preserveAspectRatio='none'%3E%3C!-- Montagne sfondo ardesia --%3E%3Cpath fill='%23747a73' opacity='.15' d='M0 181l145-74 75 39 144-91 132 114 100-54 115 67 194-132 167 118 92-50 236 89v93H0z'/%3E%3Cpath fill='%234c5550' opacity='.18' d='M0 201l194-75 121 49 183-65 143 75 168-58 162 64 207-91 126 75 116-39v114H0z'/%3E%3C!-- Bosco di sfondo (alberi piccoli verdi chiari) --%3E%3Cg fill='%23355246' opacity='.12'%3E%3Cpath d='M80 160l-15 30h9l-18 35h14v20h5v-20h14l-18-35h9zM220 150l-12 25h7l-15 30h11v25h5v-25h11l-15-30h7zM1180 155l-14 28h8l-16 32h13v20h5v-20h13l-16-32h8z'/%3E%3C/g%3E%3C!-- Bosco mezza costa (alberi medi verde ardesia) --%3E%3Cg fill='%23263d34' opacity='.16'%3E%3Cpath d='M1250 135l-18 36h11l-22 42h17v22h6v-22h17l-22-42h11zM1350 145l-15 30h9l-18 35h14v25h5v-25h14l-18-35h9zM140 140l-16 32h10l-20 38h15v20h6v-20h15l-20-38h10z'/%3E%3C/g%3E%3C!-- Bosco in primo piano a destra (alberi grandi pino scuro ancorati al fondo) --%3E%3Cg fill='%23263d34' opacity='.22'%3E%3Cpath d='M1300 110l-25 48h14l-30 55h22v22h8v-22h22l-30-55h14zM1370 90l-30 58h17l-35 68h27v24h9v-24h27l-35-68h17z'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 240' preserveAspectRatio='none'%3E%3C!-- Profilo Montagne Sfondo --%3E%3Cpath fill='%23747a73' opacity='.15' d='M0 181l145-74 75 39 144-91 132 114 100-54 115 67 194-132 167 118 92-50 236 89v93H0z'/%3E%3Cpath fill='%234c5550' opacity='.18' d='M0 201l194-75 121 49 183-65 143 75 168-58 162 64 207-91 126 75 116-39v114H0z'/%3E%3C!-- BOSCO SINISTRA --%3E%3C!-- Tronchi Marroni --%3E%3Cpath fill='%2386684f' opacity='.45' d='M38 180h4v60h-4zM83 165h5v75h-5zM128 175h4v65h-4z'/%3E%3C!-- Albero Piccolo Sinistra --%3E%3Cpath fill='%23355246' opacity='.35' d='M40 125l-20 28h8l-22 32h10l-22 35h48l-22-35h10l-22-32h8z'/%3E%3C!-- Albero Grande Sinistra --%3E%3Cpath fill='%23263d34' opacity='.42' d='M85 95l-30 40h12l-32 45h14l-35 50h140l-35-50h14l-32-45h12z'/%3E%3C!-- Albero Medio Sinistra --%3E%3Cpath fill='%23355246' opacity='.38' d='M130 115l-22 32h9l-25 38h11l-28 45h110l-28-45h11l-25-38h9z'/%3E%3C!-- BOSCO DESTRA --%3E%3C!-- Tronchi Marroni --%3E%3Cpath fill='%2386684f' opacity='.45' d='M1278 170h5v70h-5zM1333 155h6v85h-6zM1383 175h4v65h-4z'/%3E%3C!-- Albero Medio Destra --%3E%3Cpath fill='%23355246' opacity='.38' d='M1280 110l-24 35h10l-26 40h12l-28 45h110l-28-45h12l-26-40h10z'/%3E%3C!-- Albero Grande Destra --%3E%3Cpath fill='%23263d34' opacity='.45' d='M1336 80l-32 44h13l-35 50h16l-38 56h152l-38-56h16l-35-50h13z'/%3E%3C!-- Albero Esterno Destra --%3E%3Cpath fill='%23355246' opacity='.32' d='M1385 120l-18 26h7l-20 30h9l-22 34h88l-22-34h9l-20-30h7z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -563,7 +563,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 /* Tablet */
 @media (max-width: 1023px) {
   body::after {
-    height: 170px;
+    height: 180px;
   }
 }
 
@@ -575,7 +575,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 @media (max-width: 760px) {
   body::after { 
     height: 120px; 
-    opacity: 0.8; 
+    opacity: 0.85; 
   }
   
   .topbar { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding-inline: 1rem; }
