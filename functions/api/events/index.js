@@ -1,26 +1,51 @@
-// GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD
-// Elenco pubblico degli eventi, opzionalmente filtrato per intervallo di date.
-export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const from = url.searchParams.get("from");
-  const to = url.searchParams.get("to");
+export async function onRequestGet({ env }) {
+  try {
+    // 1. Recupera tutti gli eventi dal DB
+    const eventsResult = await env.DB.prepare(
+      `SELECT * FROM events ORDER BY start_date ASC`
+    ).all();
 
-  let query = `SELECT id, slug, title, description, image_key, start_date, end_date FROM events`;
-  const params = [];
+    const events = eventsResult.results || [];
 
-  if (from && to) {
-    // include ogni evento che si sovrappone all'intervallo richiesto
-    query += ` WHERE start_date <= ? AND end_date >= ?`;
-    params.push(to, from);
+    // 2. Associa sondaggi e voti approvati ad ogni evento
+    for (let event of events) {
+      // Parsing sicuro dei partecipanti
+      if (typeof event.participants === 'string') {
+        try {
+          event.participants = JSON.parse(event.participants);
+        } catch (e) {
+          event.participants = event.participants ? event.participants.split(',').map(p => p.trim()) : [];
+        }
+      }
+
+      // Recupera eventuale sondaggio collegato
+      const poll = await env.DB.prepare(
+        `SELECT * FROM polls WHERE event_id = ?`
+      ).bind(event.id).first();
+
+      if (poll) {
+        const options = await env.DB.prepare(
+          `SELECT * FROM poll_options WHERE poll_id = ?`
+        ).bind(poll.id).all();
+
+        // Seleziona SOLO i voti accettati dall'admin
+        const votes = await env.DB.prepare(
+          `SELECT * FROM votes WHERE poll_id = ? AND status = 'accepted'`
+        ).bind(poll.id).all();
+
+        poll.options = options.results || [];
+        poll.votes = votes.results || [];
+        event.poll = poll;
+      }
+    }
+
+    return new Response(JSON.stringify(events), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
-  query += ` ORDER BY start_date ASC`;
-
-  const { results } = await env.DB.prepare(query).bind(...params).all();
-
-  const events = results.map((e) => ({
-    ...e,
-    image_url: e.image_key ? `/api/images/${e.image_key}` : null,
-  }));
-
-  return Response.json(events);
 }
