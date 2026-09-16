@@ -34,15 +34,16 @@ export async function onRequestPost({ request, env }) {
   ).bind(body.pollId, voterName).first();
 
   if (existingByName) {
-    // Aggiorna il voto esistente (aggiornando anche il token così il browser viene ri-associato)
+    // Aggiorna il voto esistente mantenendo/impostando lo stato su 'pending'
     await env.DB.prepare(
-      `UPDATE votes SET option_id = ?, voter_name = ?, voter_token = ?, created_at = datetime('now') WHERE id = ?`
+      `UPDATE votes SET option_id = ?, voter_name = ?, voter_token = ?, status = 'pending', created_at = datetime('now') WHERE id = ?`
     ).bind(body.optionId, voterName, token, existingByName.id).run();
   } else {
+    // Inserisce il nuovo voto salvando di default lo stato 'pending'
     await env.DB.prepare(
-      `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
+      `INSERT INTO votes (poll_id, option_id, voter_token, voter_name, status) VALUES (?, ?, ?, ?, 'pending')
        ON CONFLICT(poll_id, voter_token)
-       DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now')`
+       DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, status = 'pending', created_at = datetime('now')`
     )
       .bind(body.pollId, body.optionId, token, voterName)
       .run();
