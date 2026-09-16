@@ -1,4 +1,4 @@
-// Funzioni condivise tra le pagine pubbliche
+// Funzioni condivise tra le pagine pubbliche e admin
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -96,8 +96,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const closeBtn = showClose ? `<button type="button" class="modal-close" data-close aria-label="Chiudi">&times;</button>` : "";
   const image = event.image_url ? `<img class="cover" src="${event.image_url}" alt="">` : "";
 
-  // Controlliamo se siamo in modalità admin (verificando la presenza di elementi di amministrazione o token/cookie se gestiti, oppure passiamo un flag)
-  // Qui verifichiamo se l'interfaccia corrente mostra comandi admin o se c'è un riscontro nel DOM (es. se esiste un pannello admin o rotta admin)
+  // Rileva se l'utente si trova nel pannello Admin
   const isAdmin = document.body.dataset.admin === "true" || window.location.pathname.startsWith("/admin");
 
   let participantsHtml = "";
@@ -108,7 +107,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         ${event.participants.map((p) => `
           <li>
             ${escapeHtml(p)}
-            ${isAdmin ? `<button type="button" data-remove-participant="${escapeHtml(p)}" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:6px; font-weight:bold; font-size:0.8rem;" title="Rimuovi partecipante">&times;</button>` : ""}
+            ${isAdmin ? `<button type="button" data-remove-participant="${escapeHtml(p)}" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:6px; font-weight:bold; font-size:0.9rem;" title="Rimuovi">&times;</button>` : ""}
           </li>
         `).join("")}
       </ul>
@@ -123,17 +122,16 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         const pct = Math.round((o.votes / totalVotes) * 100);
         const selected = event.poll.myOptionId === o.id;
         
-        // Se l'utente ha inserito i nomi dei votanti, li mostriamo con un pulsante admin per aggiungerli ai partecipanti
         let votersHtml = "";
         if (o.votersList && o.votersList.length) {
-          votersHtml = `<div class="poll-voters-detail" style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 6px;">
+          votersHtml = `<div class="poll-voters-detail" style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 6px;">
             Hanno votato: ${o.votersList.map(vName => {
               const isAlreadyParticipant = event.participants && event.participants.includes(vName);
-              return `<span>${escapeHtml(vName)}${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(vName)}" style="padding: 0.1em 0.4em; font-size: 0.7rem; border-radius: 4px; background: var(--success); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
+              return `<span><strong>${escapeHtml(vName)}</strong>${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(vName)}" style="padding: 0.15em 0.5em; font-size: 0.72rem; border-radius: 4px; background: var(--pine); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
             }).join(", ")}
           </div>`;
         } else if (o.voters) {
-          votersHtml = `<div class="poll-voters-list" style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>`;
+          votersHtml = `<div class="poll-voters-list" style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>`;
         }
 
         return `
@@ -194,13 +192,14 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
 
   wrap.querySelector("[data-share]").addEventListener("click", () => shareEvent(event));
 
-  // Azione Admin: Aggiungi utente votante ai partecipanti
+  // Azione Admin: Aggiungi votante ai partecipanti dell'evento
   wrap.querySelectorAll("[data-add-participant]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const participantName = btn.dataset.addParticipant;
+      btn.disabled = true;
       try {
         const updatedParticipants = [...(event.participants || []), participantName];
-        const res = await fetch(`/api/events/${event.slug}`, {
+        const res = await fetch(`/api/admin/events/${event.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...event, participants: updatedParticipants })
@@ -209,27 +208,30 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         showToast(`${participantName} aggiunto ai partecipanti!`);
         onVoteChange && onVoteChange();
       } catch (e) {
-        showToast("Errore durante l'aggiunta del partecipante");
+        showToast("Errore durante l'aggiunta");
+        btn.disabled = false;
       }
     });
   });
 
-  // Azione Admin: Rimuovi partecipante
+  // Azione Admin: Rimuovi partecipante dall'evento
   wrap.querySelectorAll("[data-remove-participant]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const participantName = btn.dataset.removeParticipant;
+      btn.disabled = true;
       try {
         const updatedParticipants = (event.participants || []).filter(p => p !== participantName);
-        const res = await fetch(`/api/events/${event.slug}`, {
+        const res = await fetch(`/api/admin/events/${event.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...event, participants: updatedParticipants })
         });
         if (!res.ok) throw new Error(await res.text());
-        showToast(`${participantName} rimosso dai partecipanti`);
+        showToast(`${participantName} rimosso`);
         onVoteChange && onVoteChange();
       } catch (e) {
         showToast("Errore durante la rimozione");
+        btn.disabled = false;
       }
     });
   });
@@ -245,8 +247,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           if (nameInput) nameInput.focus();
           return;
         }
-      } else {
-        voterName = null; 
       }
 
       btn.disabled = true;
