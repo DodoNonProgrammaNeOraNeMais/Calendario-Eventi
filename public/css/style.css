@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA DEFINITIVO (Curve Topografiche + Montagne)
+   TEMA MONTAGNA DEFINITIVO (Carta Topografica Reale + Montagne)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -41,7 +41,6 @@ html {
   background: var(--bg);
 }
 
-/* Sfondo della pagina con linee di livello topografiche stile mappa escursionistica */
 body {
   position: relative;
   isolation: isolate;
@@ -50,33 +49,26 @@ body {
   padding: 0;
   color: var(--ink);
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='760' height='560' viewBox='0 0 760 560'%3E%3Cg fill='none' stroke='%23747a73' stroke-width='1.15' opacity='.16'%3E%3Cpath d='M-40 118c88-75 180-79 257-19 80 62 178 62 257-2 76-61 173-59 286 28'/%3E%3Cpath d='M-48 154c96-81 197-87 282-20 79 62 164 61 244-3 83-67 183-64 302 30'/%3E%3Cpath d='M-55 193c105-90 216-97 309-24 71 56 146 55 218-3 92-74 201-70 327 35'/%3E%3Cpath d='M-62 238c116-99 239-107 341-27 60 47 124 46 185-3 103-82 222-77 360 39'/%3E%3Cpath d='M60 394c38-45 82-68 131-68 76 0 109 55 164 55 51 0 75-43 132-43 70 0 97 62 160 62 42 0 78-20 113-60'/%3E%3Cpath d='M37 430c46-57 98-84 155-84 78 0 111 55 164 55 50 0 78-42 132-42 69 0 98 62 159 62 49 0 91-24 131-72'/%3E%3Cpath d='M13 470c54-70 114-103 180-103 78 0 111 55 164 55 50 0 78-42 132-42 69 0 98 62 159 62 57 0 105-29 151-86'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 760px 560px;
-  background-attachment: fixed;
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
 }
 
-/* Nessun albero separato */
+/* Disattivazione elementi separati per evitare collisioni */
 body::before {
   display: none !important;
 }
 
-/* Sagoma montuosa minima e pulita a fine pagina */
+/* Sfondo unico unificato: Curve Topografiche con Quota (sopra) + Montagne (sotto) */
 body::after {
   content: "";
   position: fixed;
   z-index: -3;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 190px;
+  inset: 0;
   width: 100%;
+  height: 100vh;
   pointer-events: none;
-  opacity: .17;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1420' height='190' viewBox='0 0 1420 190' preserveAspectRatio='none'%3E%3Cpath fill='%23747a73' d='M0 151 145 77l75 39 144-91 132 114 100-54 115 67 194-132 167 118 92-50 236 89v63H0z'/%3E%3Cpath fill='%234c5550' d='m0 171 194-75 121 49 183-65 143 75 168-58 162 64 207-91 126 75 116-39v84H0z' opacity='.78'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 900' preserveAspectRatio='none'%3E%3C!-- CURVE DI LIVELLO TOPOGRAFICHE CON QUOTA (SOLO PARTE SUPERIORE) --%3E%3Cg fill='none' stroke='%23747a73' stroke-width='1.2' opacity='.18'%3E%3Cpath d='M-50 120 C 300 40, 700 180, 1470 70' /%3E%3Cpath d='M-50 190 C 250 110, 650 240, 1470 140' stroke-width='1.8' /%3E%3Cpath d='M-50 260 C 320 180, 720 310, 1470 210' /%3E%3Cpath d='M-50 330 C 280 250, 780 370, 1470 280' /%3E%3Cpath d='M-50 400 C 350 310, 820 440, 1470 350' stroke-width='1.8' /%3E%3C/g%3E%3C!-- QUOTE ALTIMETRICHE SULLE CURVE --%3E%3Cg fill='%23626a64' font-family='sans-serif' font-size='10' font-weight='600' opacity='.35'%3E%3Ctext x='210' y='110' transform='rotate(-8 210 110)'%3E2000m%3E/text%3E%3Ctext x='850' y='160' transform='rotate(10 850 160)'%3E1800m%3E/text%3E%3Ctext x='380' y='275' transform='rotate(12 380 275)'%3E1600m%3E/text%3E%3Ctext x='1120' y='240' transform='rotate(-9 1120 240)'%3E1400m%3E/text%3E%3Ctext x='620' y='410' transform='rotate(11 620 410)'%3E1200m%3E/text%3E%3C/g%3E%3C!-- MONTAGNE IN BASSO (NESSUNA COLLISIONE CON LE LINEE) --%3E%3Cg transform='translate(0, 710)'%3E%3Cpath fill='%23747a73' opacity='.15' d='M0 151 L145 77 L220 116 L364 25 L496 139 L596 85 L711 152 L905 20 L1072 138 L1164 88 L1400 177 V190 H0 Z' /%3E%3Cpath fill='%234c5550' opacity='.18' d='M0 171 L194 96 L315 145 L498 80 L641 155 L809 97 L971 161 L1178 70 L1304 145 L1420 106 V190 H0 Z' /%3E%3C/g%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -566,28 +558,11 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
    MEDIA QUERIES (Responsività per Tablet e Smartphone)
    ============================================================ */
 
-/* Tablet */
-@media (max-width: 1023px) {
-  body {
-    background-attachment: scroll;
-    background-size: 620px 457px;
-  }
-  body::after {
-    height: 145px;
-  }
-}
-
 @media (max-width: 860px) {
   .admin-layout { grid-template-columns: 1fr; } 
 }
 
-/* Smartphone */
 @media (max-width: 760px) {
-  body::after { 
-    height: 105px; 
-    opacity: .12; 
-  }
-  
   .topbar { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding-inline: 1rem; }
   .topbar nav { width: 100%; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
   
@@ -607,9 +582,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
   .date-row { flex-direction: column; gap: 0; }
 }
 
-/* Smartphone piccoli */
 @media (max-width: 430px) {
-  body { background-size: 480px 354px; }
   .calendar-grid { gap: 3px; }
   .calendar-weekday { font-size: .65rem; letter-spacing: .02em; }
   .calendar-day { min-height: 56px; }
