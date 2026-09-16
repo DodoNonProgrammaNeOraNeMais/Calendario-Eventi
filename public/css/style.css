@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA (Cielo Stellato + Montagne Ingrandite)
+   TEMA MONTAGNA MAGICO (Cielo Stellato, Stelle Cadenti e Fatine)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -41,7 +41,6 @@ html {
   background: var(--bg);
 }
 
-/* Sfondo Cielo Stellato (pattern continuo leggero) */
 body {
   position: relative;
   isolation: isolate;
@@ -50,10 +49,6 @@ body {
   padding: 0;
   color: var(--ink);
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='%23626a64' opacity='.25'%3E%3Ccircle cx='40' cy='50' r='1.5'/%3E%3Ccircle cx='180' cy='90' r='1'/%3E%3Ccircle cx='320' cy='40' r='2'/%3E%3Ccircle cx='120' cy='180' r='1.2'/%3E%3Ccircle cx='280' cy='220' r='1.5'/%3E%3Ccircle cx='70' cy='290' r='1'/%3E%3Ccircle cx='230' cy='310' r='2'/%3E%3Ccircle cx='360' cy='160' r='1.2'/%3E%3Ccircle cx='150' cy='360' r='1.5'/%3E%3C!-- Piccole croci/stelle a 4 punte --%3E%3Cpath d='M220 50h-4v-4h4v4zm0 0' stroke='%23626a64' stroke-width='.8'/%3E%3Cpath d='M90 120v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3Cpath d='M310 280v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 400px 400px;
-  background-attachment: fixed;
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
@@ -63,19 +58,16 @@ body::before {
   display: none !important;
 }
 
-/* Montagne più imponenti ed estese ancorate in basso */
+/* Sfondo Unificato: Stelle a 4 punte, Stelle Cadenti, Fatine e Montagne */
 body::after {
   content: "";
   position: fixed;
   z-index: -3;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 290px;
+  inset: 0;
   width: 100%;
+  height: 100vh;
   pointer-events: none;
-  opacity: .22;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1420' height='290' viewBox='0 0 1420 290' preserveAspectRatio='none'%3E%3Cpath fill='%23747a73' d='M0 210 L160 80 L250 140 L410 20 L560 170 L680 90 L810 180 L1020 10 L1200 170 L1310 100 L1420 200 V290 H0 Z'/%3E%3Cpath fill='%234c5550' d='M0 240 L210 120 L340 190 L550 90 L710 190 L890 110 L1060 210 L1280 80 L1420 160 V290 H0 Z' opacity='.85'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 900' preserveAspectRatio='none'%3E%3C!-- STELLE DEFINTIE A 4 PUNTE --%3E%3Cg fill='%23626a64' opacity='.35'%3E%3Cpath d='M150 70 L152 76 L158 78 L152 80 L150 86 L148 80 L142 78 L148 76 Z'/%3E%3Cpath d='M420 130 L421 134 L425 135 L421 136 L420 140 L419 136 L415 135 L419 134 Z'/%3E%3Cpath d='M750 60 L752 64 L756 65 L752 66 L750 70 L748 66 L744 65 L748 64 Z'/%3E%3Cpath d='M1050 110 L1051 114 L1055 115 L1051 116 L1050 120 L1049 116 L1045 115 L1049 114 Z'/%3E%3Cpath d='M1280 80 L1282 85 L1287 87 L1282 89 L1280 94 L1278 89 L1273 87 L1278 85 Z'/%3E%3Ccircle cx='280' cy='180' r='1.5'/%3E%3Ccircle cx='600' cy='190' r='2'/%3E%3Ccircle cx='900' cy='220' r='1.5'/%3E%3Ccircle cx='1180' cy='190' r='2'/%3E%3C/g%3E%3C!-- STELLE CADENTI CON SCIA --%3E%3Cg stroke='%23747a73' stroke-linecap='round' opacity='.3'%3E%3Cpath d='M250 50 L190 90' stroke-width='1.5'/%3E%3Ccircle cx='250' cy='50' r='2' fill='%23747a73'/%3E%3Cpath d='M980 40 L910 85' stroke-width='1.8'/%3E%3Ccircle cx='980' cy='40' r='2.2' fill='%23747a73'/%3E%3Cpath d='M1220 140 L1170 175' stroke-width='1.2'/%3E%3Ccircle cx='1220' cy='140' r='1.5' fill='%23747a73'/%3E%3C/g%3E%3C!-- FATINE IN VOLO CON SCIE MAGICHE --%3E%3Cg fill='%23355246' opacity='.35'%3E%3C!-- Fatina 1 (Sinistra) --%3E%3Cpath d='M320 220 Q310 210 290 215 Q305 225 320 220' fill='none' stroke='%23747a73' stroke-width='1' stroke-dasharray='2 3'/%3E%3Ccircle cx='322' cy='219' r='2'/%3E%3Cpath d='M320 220 C315 210 305 212 318 218 C310 225 315 230 320 220 Z'/%3E%3C!-- Fatina 2 (Centro-Destra) --%3E%3Cpath d='M830 260 Q815 245 790 255 Q810 268 830 260' fill='none' stroke='%23747a73' stroke-width='1' stroke-dasharray='2 3'/%3E%3Ccircle cx='832' cy='259' r='2.5'/%3E%3Cpath d='M830 260 C822 248 810 250 826 257 C816 266 822 272 830 260 Z'/%3E%3C/g%3E%3C!-- MONTAGNE INBASSO INGRANDITE --%3E%3Cg transform='translate(0, 610)'%3E%3Cpath fill='%23747a73' opacity='.17' d='M0 210 L160 80 L250 140 L410 20 L560 170 L680 90 L810 180 L1020 10 L1200 170 L1310 100 L1420 200 V290 H0 Z'/%3E%3Cpath fill='%234c5550' opacity='.20' d='M0 240 L210 120 L340 190 L550 90 L710 190 L890 110 L1060 210 L1280 80 L1420 160 V290 H0 Z'/%3E%3C/g%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
