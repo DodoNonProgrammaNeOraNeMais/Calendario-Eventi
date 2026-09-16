@@ -96,7 +96,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const closeBtn = showClose ? `<button type="button" class="modal-close" data-close aria-label="Chiudi">&times;</button>` : "";
   const image = event.image_url ? `<img class="cover" src="${event.image_url}" alt="">` : "";
 
-  // Rileva se l'utente si trova nel pannello Admin
+  // Rileva se l'utente si trova nel pannello Admin o se la pagina è in modalità Admin
   const isAdmin = document.body.dataset.admin === "true" || window.location.pathname.startsWith("/admin");
 
   let participantsHtml = "";
@@ -123,15 +123,16 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         const selected = event.poll.myOptionId === o.id;
         
         let votersHtml = "";
-        if (o.votersList && o.votersList.length) {
+        const listToDisplay = (o.votersList && o.votersList.length) ? o.votersList : (o.voters ? o.voters.split(", ") : []);
+
+        if (listToDisplay.length) {
           votersHtml = `<div class="poll-voters-detail" style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 6px;">
-            Hanno votato: ${o.votersList.map(vName => {
-              const isAlreadyParticipant = event.participants && event.participants.includes(vName);
-              return `<span><strong>${escapeHtml(vName)}</strong>${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(vName)}" style="padding: 0.15em 0.5em; font-size: 0.72rem; border-radius: 4px; background: var(--pine); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
+            Hanno votato: ${listToDisplay.map(vName => {
+              const cleanName = vName.trim();
+              const isAlreadyParticipant = event.participants && event.participants.includes(cleanName);
+              return `<span><strong>${escapeHtml(cleanName)}</strong>${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(cleanName)}" style="padding: 0.15em 0.5em; font-size: 0.72rem; border-radius: 4px; background: var(--pine); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
             }).join(", ")}
           </div>`;
-        } else if (o.voters) {
-          votersHtml = `<div class="poll-voters-list" style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>`;
         }
 
         return `
@@ -161,7 +162,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         ${
           event.poll.isOpen
             ? `<div class="poll-deadline" style="margin-top: 1rem;">Puoi votare fino al ${formatDeadline(event.poll.deadline)}</div>
-               ${event.poll.myOptionId ? `<button type="button" data-remove-vote class="secondary" style="margin-top:0.6rem;">Ritira il voto</button>` : ""}`
+               ${event.poll.myOptionId || isAdmin ? `<button type="button" data-remove-vote class="secondary" style="margin-top:0.6rem;">Ritira il voto</button>` : ""}`
             : `<div class="poll-closed-note">Sondaggio chiuso</div>`
         }
       </div>`;
@@ -276,6 +277,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       try {
         const res = await fetch(`/api/votes?pollId=${event.poll.id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
+        showToast("Voto ritirato");
         onVoteChange && onVoteChange();
       } catch (e) {
         showToast("Non e' stato possibile ritirare il voto");
