@@ -1,4 +1,4 @@
-// Funzioni condivise tra le pagine pubbliche e admin
+// Funzioni condivise tra le pagine pubbliche
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -96,21 +96,11 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const closeBtn = showClose ? `<button type="button" class="modal-close" data-close aria-label="Chiudi">&times;</button>` : "";
   const image = event.image_url ? `<img class="cover" src="${event.image_url}" alt="">` : "";
 
-  // Rileva se l'utente si trova nel pannello Admin o se la pagina è in modalità Admin
-  const isAdmin = document.body.dataset.admin === "true" || window.location.pathname.startsWith("/admin");
-
   let participantsHtml = "";
   if (event.participants && event.participants.length) {
     participantsHtml = `
       <h3>Partecipanti</h3>
-      <ul class="participants-list">
-        ${event.participants.map((p) => `
-          <li>
-            ${escapeHtml(p)}
-            ${isAdmin ? `<button type="button" data-remove-participant="${escapeHtml(p)}" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:6px; font-weight:bold; font-size:0.9rem;" title="Rimuovi">&times;</button>` : ""}
-          </li>
-        `).join("")}
-      </ul>
+      <ul class="participants-list">${event.participants.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>
     `;
   }
 
@@ -121,28 +111,16 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       .map((o) => {
         const pct = Math.round((o.votes / totalVotes) * 100);
         const selected = event.poll.myOptionId === o.id;
-        
-        let votersHtml = "";
-        const listToDisplay = (o.votersList && o.votersList.length) ? o.votersList : (o.voters ? o.voters.split(", ") : []);
-
-        if (listToDisplay.length) {
-          votersHtml = `<div class="poll-voters-detail" style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 6px;">
-            Hanno votato: ${listToDisplay.map(vName => {
-              const cleanName = vName.trim();
-              const isAlreadyParticipant = event.participants && event.participants.includes(cleanName);
-              return `<span><strong>${escapeHtml(cleanName)}</strong>${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(cleanName)}" style="padding: 0.15em 0.5em; font-size: 0.72rem; border-radius: 4px; background: var(--pine); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
-            }).join(", ")}
-          </div>`;
-        }
+        const votersListHtml = o.voters ? `<div class="poll-voters-list" style="font-size: 0.85rem; color: #666; margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>` : "";
 
         return `
-        <div class="poll-option ${selected ? "selected" : ""}" style="margin-bottom: 1rem; flex-direction: column; align-items: stretch;">
+        <div class="poll-option ${selected ? "selected" : ""}" style="margin-bottom: 1rem;">
           <div class="bar-wrap">
             <div class="bar-label"><span>${escapeHtml(o.label)}${selected ? " (il tuo voto)" : ""}</span><span>${o.votes}</span></div>
             <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           </div>
-          ${votersHtml}
-          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}" style="margin-top: 8px; align-self: flex-start;">${selected ? "Cambia" : "Vota"}</button>` : ""}
+          ${votersListHtml}
+          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}" style="margin-top: 8px;">${selected ? "Cambia" : "Vota"}</button>` : ""}
         </div>`;
       })
       .join("");
@@ -154,7 +132,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           event.poll.isOpen && !event.poll.myOptionId
             ? `<div style="margin-bottom: 1rem;">
                  <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Il tuo nome per votare:</label>
-                 <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm);">
+                 <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
                </div>`
             : ""
         }
@@ -162,7 +140,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         ${
           event.poll.isOpen
             ? `<div class="poll-deadline" style="margin-top: 1rem;">Puoi votare fino al ${formatDeadline(event.poll.deadline)}</div>
-               ${event.poll.myOptionId || isAdmin ? `<button type="button" data-remove-vote class="secondary" style="margin-top:0.6rem;">Ritira il voto</button>` : ""}`
+               ${event.poll.myOptionId ? `<button type="button" data-remove-vote class="secondary" style="margin-top:0.6rem;">Ritira il voto</button>` : ""}`
             : `<div class="poll-closed-note">Sondaggio chiuso</div>`
         }
       </div>`;
@@ -193,50 +171,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
 
   wrap.querySelector("[data-share]").addEventListener("click", () => shareEvent(event));
 
-  // Azione Admin: Aggiungi votante ai partecipanti dell'evento
-  wrap.querySelectorAll("[data-add-participant]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const participantName = btn.dataset.addParticipant;
-      btn.disabled = true;
-      try {
-        const updatedParticipants = [...(event.participants || []), participantName];
-        const res = await fetch(`/api/admin/events/${event.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...event, participants: updatedParticipants })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        showToast(`${participantName} aggiunto ai partecipanti!`);
-        onVoteChange && onVoteChange();
-      } catch (e) {
-        showToast("Errore durante l'aggiunta");
-        btn.disabled = false;
-      }
-    });
-  });
-
-  // Azione Admin: Rimuovi partecipante dall'evento
-  wrap.querySelectorAll("[data-remove-participant]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const participantName = btn.dataset.removeParticipant;
-      btn.disabled = true;
-      try {
-        const updatedParticipants = (event.participants || []).filter(p => p !== participantName);
-        const res = await fetch(`/api/admin/events/${event.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...event, participants: updatedParticipants })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        showToast(`${participantName} rimosso`);
-        onVoteChange && onVoteChange();
-      } catch (e) {
-        showToast("Errore durante la rimozione");
-        btn.disabled = false;
-      }
-    });
-  });
-
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       let voterName = null;
@@ -248,6 +182,8 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           if (nameInput) nameInput.focus();
           return;
         }
+      } else {
+        voterName = null; 
       }
 
       btn.disabled = true;
@@ -277,7 +213,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       try {
         const res = await fetch(`/api/votes?pollId=${event.poll.id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
-        showToast("Voto ritirato");
         onVoteChange && onVoteChange();
       } catch (e) {
         showToast("Non e' stato possibile ritirare il voto");
