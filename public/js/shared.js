@@ -96,11 +96,22 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const closeBtn = showClose ? `<button type="button" class="modal-close" data-close aria-label="Chiudi">&times;</button>` : "";
   const image = event.image_url ? `<img class="cover" src="${event.image_url}" alt="">` : "";
 
+  // Controlliamo se siamo in modalità admin (verificando la presenza di elementi di amministrazione o token/cookie se gestiti, oppure passiamo un flag)
+  // Qui verifichiamo se l'interfaccia corrente mostra comandi admin o se c'è un riscontro nel DOM (es. se esiste un pannello admin o rotta admin)
+  const isAdmin = document.body.dataset.admin === "true" || window.location.pathname.startsWith("/admin");
+
   let participantsHtml = "";
   if (event.participants && event.participants.length) {
     participantsHtml = `
       <h3>Partecipanti</h3>
-      <ul class="participants-list">${event.participants.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>
+      <ul class="participants-list">
+        ${event.participants.map((p) => `
+          <li>
+            ${escapeHtml(p)}
+            ${isAdmin ? `<button type="button" data-remove-participant="${escapeHtml(p)}" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:6px; font-weight:bold; font-size:0.8rem;" title="Rimuovi partecipante">&times;</button>` : ""}
+          </li>
+        `).join("")}
+      </ul>
     `;
   }
 
@@ -111,16 +122,28 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       .map((o) => {
         const pct = Math.round((o.votes / totalVotes) * 100);
         const selected = event.poll.myOptionId === o.id;
-        const votersListHtml = o.voters ? `<div class="poll-voters-list" style="font-size: 0.85rem; color: #666; margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>` : "";
+        
+        // Se l'utente ha inserito i nomi dei votanti, li mostriamo con un pulsante admin per aggiungerli ai partecipanti
+        let votersHtml = "";
+        if (o.votersList && o.votersList.length) {
+          votersHtml = `<div class="poll-voters-detail" style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 6px;">
+            Hanno votato: ${o.votersList.map(vName => {
+              const isAlreadyParticipant = event.participants && event.participants.includes(vName);
+              return `<span>${escapeHtml(vName)}${isAdmin && !isAlreadyParticipant ? ` <button type="button" data-add-participant="${escapeHtml(vName)}" style="padding: 0.1em 0.4em; font-size: 0.7rem; border-radius: 4px; background: var(--success); color: #fff; border: none; cursor: pointer; margin-left: 4px;">+ Partecipante</button>` : ""}</span>`;
+            }).join(", ")}
+          </div>`;
+        } else if (o.voters) {
+          votersHtml = `<div class="poll-voters-list" style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 4px;">Hanno votato: ${escapeHtml(o.voters)}</div>`;
+        }
 
         return `
-        <div class="poll-option ${selected ? "selected" : ""}" style="margin-bottom: 1rem;">
+        <div class="poll-option ${selected ? "selected" : ""}" style="margin-bottom: 1rem; flex-direction: column; align-items: stretch;">
           <div class="bar-wrap">
             <div class="bar-label"><span>${escapeHtml(o.label)}${selected ? " (il tuo voto)" : ""}</span><span>${o.votes}</span></div>
             <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           </div>
-          ${votersListHtml}
-          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}" style="margin-top: 8px;">${selected ? "Cambia" : "Vota"}</button>` : ""}
+          ${votersHtml}
+          ${event.poll.isOpen ? `<button type="button" data-vote-option="${o.id}" class="${selected ? "secondary" : ""}" style="margin-top: 8px; align-self: flex-start;">${selected ? "Cambia" : "Vota"}</button>` : ""}
         </div>`;
       })
       .join("");
@@ -132,7 +155,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           event.poll.isOpen && !event.poll.myOptionId
             ? `<div style="margin-bottom: 1rem;">
                  <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Il tuo nome per votare:</label>
-                 <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                 <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm);">
                </div>`
             : ""
         }
@@ -170,6 +193,46 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   }
 
   wrap.querySelector("[data-share]").addEventListener("click", () => shareEvent(event));
+
+  // Azione Admin: Aggiungi utente votante ai partecipanti
+  wrap.querySelectorAll("[data-add-participant]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const participantName = btn.dataset.addParticipant;
+      try {
+        const updatedParticipants = [...(event.participants || []), participantName];
+        const res = await fetch(`/api/events/${event.slug}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...event, participants: updatedParticipants })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showToast(`${participantName} aggiunto ai partecipanti!`);
+        onVoteChange && onVoteChange();
+      } catch (e) {
+        showToast("Errore durante l'aggiunta del partecipante");
+      }
+    });
+  });
+
+  // Azione Admin: Rimuovi partecipante
+  wrap.querySelectorAll("[data-remove-participant]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const participantName = btn.dataset.removeParticipant;
+      try {
+        const updatedParticipants = (event.participants || []).filter(p => p !== participantName);
+        const res = await fetch(`/api/events/${event.slug}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...event, participants: updatedParticipants })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showToast(`${participantName} rimosso dai partecipanti`);
+        onVoteChange && onVoteChange();
+      } catch (e) {
+        showToast("Errore durante la rimozione");
+      }
+    });
+  });
 
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
     btn.addEventListener("click", async () => {
