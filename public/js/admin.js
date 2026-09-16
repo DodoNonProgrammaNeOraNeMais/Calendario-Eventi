@@ -176,10 +176,16 @@ async function loadAdminEvents() {
 
   list.innerHTML = "";
   events.forEach((e) => {
+    // Risolve l'URL dell'immagine se presente come URL completo o come key
+    let imgSrc = e.image_url;
+    if (!imgSrc && e.image_key) {
+      imgSrc = e.image_key.startsWith("http") ? e.image_key : `/api/images/${e.image_key}`;
+    }
+
     const row = document.createElement("div");
     row.className = "admin-event-row";
     row.innerHTML = `
-      ${e.image_url ? `<img src="${e.image_url}" alt="">` : `<div style="width:46px;height:46px;border-radius:6px;background:#efece1;flex-shrink:0;"></div>`}
+      ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:46px;height:46px;border-radius:6px;object-fit:cover;flex-shrink:0;">` : `<div style="width:46px;height:46px;border-radius:6px;background:#efece1;flex-shrink:0;"></div>`}
       <div class="info">
         <div class="title">${escapeHtml(e.title)}</div>
         <div class="dates">${formatDateRange(e.start_date, e.end_date)}</div>
@@ -193,6 +199,14 @@ async function loadAdminEvents() {
       </div>`;
     list.appendChild(row);
   });
+
+  list.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => startEdit(btn.dataset.edit, btn.dataset.slug));
+  });
+  list.querySelectorAll("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", () => deleteEvent(btn.dataset.delete));
+  });
+}
 
   list.querySelectorAll("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", () => startEdit(btn.dataset.edit, btn.dataset.slug));
