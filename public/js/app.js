@@ -109,10 +109,10 @@ function showDayEvents(iso, dayEvents) {
           ${dayEvents
             .map(
               (e) => `
-            <button type="button" class="event-card" data-slug="${e.slug}">
-              ${e.image_url ? `<img src="${e.image_url}" alt="">` : ""}
-              <div class="event-card-body"><h3>${escapeHtml(e.title)}</h3></div>
-            </button>`
+            <div class="event-card" data-slug="${e.slug}" style="cursor: pointer; display: flex; align-items: center; gap: 1rem;">
+              ${e.image_url ? `<img src="${e.image_url}" alt="" class="list-thumb" style="width:60px; height:60px; object-fit:cover; border-radius:8px; cursor:zoom-in;">` : ""}
+              <div class="event-card-body" style="flex:1;"><h3>${escapeHtml(e.title)}</h3></div>
+            </div>`
             )
             .join("")}
         </div>
@@ -121,21 +121,23 @@ function showDayEvents(iso, dayEvents) {
   backdrop.appendChild(modal);
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) root.innerHTML = ""; });
   modal.querySelector("[data-close]").addEventListener("click", () => (root.innerHTML = ""));
-  modal.querySelectorAll("[data-slug]").forEach((el) => el.addEventListener("click", () => openEventModal(el.dataset.slug)));
+  
+  modal.querySelectorAll(".event-card").forEach((el) => {
+    const slug = el.dataset.slug;
+    const thumb = el.querySelector(".list-thumb");
+    
+    if (thumb) {
+      thumb.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openImageFullscreen(thumb.src);
+      });
+    }
+    el.addEventListener("click", () => openEventModal(slug));
+  });
+
   root.appendChild(backdrop);
 }
-function openImageFullscreen(url) {
-  if (!url) return;
-  const backdrop = document.createElement("div");
-  backdrop.className = "image-fullscreen-backdrop";
-  backdrop.innerHTML = `<img src="${url}" alt="Immagine a schermo intero">`;
-  
-  backdrop.addEventListener("click", () => {
-    backdrop.remove();
-  });
-  
-  document.body.appendChild(backdrop);
-}
+
 async function loadUpcoming() {
   const list = document.getElementById("upcoming-list");
   list.innerHTML = `<p class="empty-state">Caricamento...</p>`;
@@ -162,12 +164,21 @@ async function loadUpcoming() {
     card.type = "button";
     card.className = "event-card";
     card.innerHTML = `
-      ${e.image_url ? `<img src="${e.image_url}" alt="">` : ""}
+      ${e.image_url ? `<img src="${e.image_url}" alt="" class="upcoming-thumb">` : ""}
       <div class="event-card-body">
         <div class="event-date">${formatDateRange(e.start_date, e.end_date)}</div>
         <h3>${escapeHtml(e.title)}</h3>
         ${e.description ? `<p>${escapeHtml(e.description)}</p>` : ""}
       </div>`;
+    
+    const thumb = card.querySelector(".upcoming-thumb");
+    if (thumb) {
+      thumb.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openImageFullscreen(thumb.src);
+      });
+    }
+
     card.addEventListener("click", () => openEventModal(e.slug));
     list.appendChild(card);
   });
