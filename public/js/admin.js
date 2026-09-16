@@ -1,5 +1,5 @@
 // ============================================================
-// ADMIN.JS - GESTIONE EVENTI E APPROVAZIONE SONDAGGI/PARTECIPANTI
+// ADMIN.JS - GESTIONE EVENTI, UPLOAD E APPROVAZIONE SONDAGGI
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initAdmin() {
   loadAdminEvents();
-  loadPendingVotes(); // Carica le risposte in attesa di approvazione
+  loadPendingVotes();
+  setupImageUpload();
   setupFormListeners();
 }
 
@@ -22,10 +23,13 @@ async function loadPendingVotes() {
 
   try {
     const res = await fetch('/api/admin/votes');
-    if (!res.ok) throw new Error('Errore nel recupero delle risposte');
+    if (!res.ok) {
+      container.innerHTML = '<p class="empty-state">Nessuna risposta in attesa di approvazione.</p>';
+      return;
+    }
     
     const votes = await res.json();
-    const pendingVotes = votes.filter(v => v.status === 'pending');
+    const pendingVotes = (votes || []).filter(v => v.status === 'pending');
 
     if (pendingVotes.length === 0) {
       container.innerHTML = '<p class="empty-state">Nessuna risposta in attesa di approvazione.</p>';
@@ -35,8 +39,8 @@ async function loadPendingVotes() {
     container.innerHTML = pendingVotes.map(v => `
       <div class="admin-event-row" id="vote-row-${v.id}">
         <div class="info">
-          <div class="title">${escapeHtml(v.voter_name || v.user_name)}</div>
-          <div class="dates">Evento: ${escapeHtml(v.event_title || 'Sondaggio')} | Opzione: ${escapeHtml(v.option_text || 'Scelta #' + (v.option_id || v.option_index))}</div>
+          <div class="title">${escapeHtml(v.voter_name || v.user_name || 'Utente')}</div>
+          <div class="dates">Risposta: ${escapeHtml(v.option_text || 'Opzione #' + (v.option_id || v.option_index || 1))}</div>
         </div>
         <div class="row-actions">
           <button type="button" onclick="acceptVote('${v.id}')">Accetta</button>
@@ -46,6 +50,7 @@ async function loadPendingVotes() {
     `).join('');
   } catch (err) {
     console.error('Errore caricamento voti:', err);
+    container.innerHTML = '<p class="empty-state">Errore nel caricamento delle risposte.</p>';
   }
 }
 
@@ -62,10 +67,11 @@ window.acceptVote = async function(voteId) {
       const row = document.getElementById(`vote-row-${voteId}`);
       if (row) row.remove();
       showToast('Risposta accettata e partecipante aggiunto!');
-      loadAdminEvents(); // Ricarica la lista eventi aggiornata
+      loadAdminEvents();
+      loadPendingVotes();
     } else {
-      const errData = await res.json();
-      alert('Errore: ' + (errData.error || 'Impossibile accettare'));
+      const errData = await res.json().catch(() => ({}));
+      alert('Errore: ' + (errData.error || 'Impossibile accettare la risposta'));
     }
   } catch (err) {
     console.error('Errore accettazione voto:', err);
@@ -86,6 +92,7 @@ window.rejectVote = async function(voteId) {
       const row = document.getElementById(`vote-row-${voteId}`);
       if (row) row.remove();
       showToast('Richiesta eliminata');
+      loadPendingVotes();
     } else {
       alert('Errore durante l\'eliminazione della risposta');
     }
@@ -95,7 +102,7 @@ window.rejectVote = async function(voteId) {
 };
 
 // ------------------------------------------------------------
-// 2. GESTIONE LISTA ED ELIMINAZIONE EVENTI
+// 2. GESTIONE CARICAMENTO ED ELIMINAZIONE EVENTI
 // ------------------------------------------------------------
 
 async function loadAdminEvents() {
@@ -108,7 +115,7 @@ async function loadAdminEvents() {
     
     const events = await res.json();
     
-    if (events.length === 0) {
+    if (!events || events.length === 0) {
       container.innerHTML = '<p class="empty-state">Nessun evento presente.</p>';
       return;
     }
@@ -121,13 +128,13 @@ async function loadAdminEvents() {
           <div class="dates">${formatDate(e.start_date)} - ${formatDate(e.end_date)}</div>
         </div>
         <div class="row-actions">
-          <button type="button" class="secondary" onclick="editEvent('${e.id}')">Modifica</button>
           <button type="button" class="danger" onclick="deleteEvent('${e.id}')">Elimina</button>
         </div>
       </div>
     `).join('');
   } catch (err) {
     console.error('Errore caricamento lista eventi:', err);
+    container.innerHTML = '<p class="empty-state">Impossibile caricare gli eventi.</p>';
   }
 }
 
@@ -148,15 +155,68 @@ window.deleteEvent = async function(eventId) {
 };
 
 // ------------------------------------------------------------
-// 3. EVENT LISTENERS E UTILITIES
+// 3. UPLOAD IMMAGINI (DRAG & DROP / CLICK)
+// ------------------------------------------------------------
+
+function setupImageUpload() {
+  const dropZone = document.querySelector('.image-drop');
+  let fileInput = document.getElementById('image-input');
+
+  if (!dropZone) return;
+
+  // Crea l'input file invisibile se non è presente nell'HTML
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'image-input';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+  }
+
+  dropZone.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      dropZone.textContent = 'Caricamento in corso...';
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Errore durante il caricamento');
+
+      const data = await res.json();
+      const imageUrl = data.url || data.imageUrl || data.key;
+
+      const hiddenInput = document.getElementById('image-url') || document.querySelector('input[name="image_url"]');
+      if (hiddenInput) hiddenInput.value = imageUrl;
+
+      dropZone.innerHTML = `Immagine caricata! <br><small>${escapeHtml(file.name)}</small>`;
+    } catch (err) {
+      alert('Errore upload: ' + err.message);
+      dropZone.textContent = 'Clicca o trascina qui un\'immagine';
+    }
+  });
+}
+
+// ------------------------------------------------------------
+// 4. UTILITIES
 // ------------------------------------------------------------
 
 function setupFormListeners() {
   const form = document.getElementById('event-form');
   if (form) {
     form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      // Logica del form di salvataggio evento già esistente nel tuo progetto
+      // Mantiene la normale sottomissione del form evento
     });
   }
 }
