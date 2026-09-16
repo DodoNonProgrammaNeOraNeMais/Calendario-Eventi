@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA DEFINITIVO (Carta Topografica Reale + Montagne)
+   TEMA MONTAGNA (Cielo Stellato + Montagne Ingrandite)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -41,6 +41,7 @@ html {
   background: var(--bg);
 }
 
+/* Sfondo Cielo Stellato (pattern continuo leggero) */
 body {
   position: relative;
   isolation: isolate;
@@ -49,6 +50,10 @@ body {
   padding: 0;
   color: var(--ink);
   background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='%23626a64' opacity='.25'%3E%3Ccircle cx='40' cy='50' r='1.5'/%3E%3Ccircle cx='180' cy='90' r='1'/%3E%3Ccircle cx='320' cy='40' r='2'/%3E%3Ccircle cx='120' cy='180' r='1.2'/%3E%3Ccircle cx='280' cy='220' r='1.5'/%3E%3Ccircle cx='70' cy='290' r='1'/%3E%3Ccircle cx='230' cy='310' r='2'/%3E%3Ccircle cx='360' cy='160' r='1.2'/%3E%3Ccircle cx='150' cy='360' r='1.5'/%3E%3C!-- Piccole croci/stelle a 4 punte --%3E%3Cpath d='M220 50h-4v-4h4v4zm0 0' stroke='%23626a64' stroke-width='.8'/%3E%3Cpath d='M90 120v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3Cpath d='M310 280v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  background-attachment: fixed;
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
@@ -58,16 +63,19 @@ body::before {
   display: none !important;
 }
 
-/* Sfondo unico: Curve Topografiche con Quota (sopra) + Montagne (sotto) */
+/* Montagne più imponenti ed estese ancorate in basso */
 body::after {
   content: "";
   position: fixed;
   z-index: -3;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 290px;
   width: 100%;
-  height: 100vh;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 900' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23747a73' stroke-width='1.2' opacity='.18'%3E%3Cpath d='M-50 120 C 300 40, 700 180, 1470 70' /%3E%3Cpath d='M-50 190 C 250 110, 650 240, 1470 140' stroke-width='1.8' /%3E%3Cpath d='M-50 260 C 320 180, 720 310, 1470 210' /%3E%3Cpath d='M-50 330 C 280 250, 780 370, 1470 280' /%3E%3Cpath d='M-50 400 C 350 310, 820 440, 1470 350' stroke-width='1.8' /%3E%3C/g%3E%3Cg fill='%23626a64' font-family='sans-serif' font-size='11' font-weight='600' opacity='.35'%3E%3Ctext x='210' y='110' transform='rotate(-8 210 110)'%3E2000m%3C/text%3E%3Ctext x='850' y='160' transform='rotate(10 850 160)'%3E1800m%3C/text%3E%3Ctext x='380' y='275' transform='rotate(12 380 275)'%3E1600m%3C/text%3E%3Ctext x='1120' y='240' transform='rotate(-9 1120 240)'%3E1400m%3C/text%3E%3Ctext x='620' y='410' transform='rotate(11 620 410)'%3E1200m%3C/text%3E%3C/g%3E%3Cg transform='translate(0, 710)'%3E%3Cpath fill='%23747a73' opacity='.15' d='M0 151 L145 77 L220 116 L364 25 L496 139 L596 85 L711 152 L905 20 L1072 138 L1164 88 L1400 177 V190 H0 Z' /%3E%3Cpath fill='%234c5550' opacity='.18' d='M0 171 L194 96 L315 145 L498 80 L641 155 L809 97 L971 161 L1178 70 L1304 145 L1420 106 V190 H0 Z' /%3E%3C/g%3E%3C/svg%3E");
+  opacity: .22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1420' height='290' viewBox='0 0 1420 290' preserveAspectRatio='none'%3E%3Cpath fill='%23747a73' d='M0 210 L160 80 L250 140 L410 20 L560 170 L680 90 L810 180 L1020 10 L1200 170 L1310 100 L1420 200 V290 H0 Z'/%3E%3Cpath fill='%234c5550' d='M0 240 L210 120 L340 190 L550 90 L710 190 L890 110 L1060 210 L1280 80 L1420 160 V290 H0 Z' opacity='.85'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -557,11 +565,22 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
    MEDIA QUERIES (Responsività per Tablet e Smartphone)
    ============================================================ */
 
+@media (max-width: 1023px) {
+  body::after {
+    height: 220px;
+  }
+}
+
 @media (max-width: 860px) {
   .admin-layout { grid-template-columns: 1fr; } 
 }
 
 @media (max-width: 760px) {
+  body::after { 
+    height: 150px; 
+    opacity: .18; 
+  }
+  
   .topbar { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding-inline: 1rem; }
   .topbar nav { width: 100%; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
   
