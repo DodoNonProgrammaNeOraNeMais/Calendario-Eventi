@@ -1,70 +1,94 @@
-export async function onRequestPut(context) {
-  const { env, params, request } = context;
-  const id = params.id;
+// PUT /api/admin/events/:id -> aggiorna un evento (dati, partecipanti, sondaggio)
+// DELETE /api/admin/events/:id -> elimina l'evento e tutto cio' che e' collegato
+// Protetto da Cloudflare Access (vedi README, applicazione su /admin*).
 
-  if (!env.DB) {
-    return new Response(JSON.stringify({ error: "Database not configured" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-
+export async function onRequestPut({ params, request, env }) {
   try {
-    const data = await request.json();
-    const participantsJson = JSON.stringify(data.participants || []);
-    const imgValue = data.image_url !== undefined ? data.image_url : (data.image_key !== undefined ? data.image_key : null);
+    const body = await request.json().catch(() => null);
+    if (!body) return new Response("JSON non valido", { status: 400 });
 
-    await env.DB.prepare(`
-      UPDATE events 
-      SET title = COALESCE(?, title), 
-          description = COALESCE(?, description), 
-          start_date = COALESCE(?, start_date), 
-          end_date = COALESCE(?, end_date), 
-          image_key = COALESCE(?, image_key), 
-          participants = ?
-      WHERE id = ? OR slug = ?
-    `).bind(
-      data.title || null,
-      data.description !== undefined ? data.description : null,
-      data.start_date || null,
-      data.end_date || null,
-      imgValue,
-      participantsJson,
-      id,
-      id
-    ).run();
+    const { title, description, start_date, end_date, image_key, participants, poll } = body;
+    if (!title || !start_date || !end_date) {
+      return new Response("Titolo e date sono obbligatori", { status: 400 });
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    await env.DB.prepare(
+      `UPDATE events
+       SET title = ?, description = ?, start_date = ?, end_date = ?, image_key = COALESCE(?, image_key)
+       WHERE id = ?`
+    )
+      .bind(title, description || "", start_date, end_date, image_key || null, params.id)
+      .run();
+
+    // Sostituisce la lista partecipanti
+    await env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id).run();
+    if (Array.isArray(participants) && participants.length) {
+      const clean = participants.map((n) => n.trim()).filter(Boolean);
+      if (clean.length) {
+        const stmt = env.DB.prepare(`INSERT INTO participants (event_id, name) VALUES (?, ?)`);
+        await env.DB.batch(clean.map((name) => stmt.bind(params.id, name)));
+      }
+    }
+
+    const existingPoll = await env.DB.prepare(`SELECT id FROM polls WHERE event_id = ?`)
+      .bind(params.id)
+      .first();
+
+    const options = poll && Array.isArray(poll.options) ? poll.options.map((o) => o.trim()).filter(Boolean) : [];
+    const wantsPoll = poll && poll.question && poll.deadline && options.length >= 2;
+
+    if (wantsPoll) {
+      let pollId = existingPoll ? existingPoll.id : crypto.randomUUID();
+      if (existingPoll) {
+        await env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(pollId).run();
+        await env.DB.prepare(`UPDATE polls SET question = ?, deadline = ? WHERE id = ?`)
+          .bind(poll.question, poll.deadline, pollId)
+          .run();
+        await env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(pollId).run();
+      } else {
+        await env.DB.prepare(
+          `INSERT INTO polls (id, event_id, question, deadline) VALUES (?, ?, ?, ?)`
+        )
+          .bind(pollId, params.id, poll.question, poll.deadline)
+          .run();
+      }
+      const stmt = env.DB.prepare(`INSERT INTO poll_options (poll_id, label) VALUES (?, ?)`);
+      await env.DB.batch(options.map((label) => stmt.bind(pollId, label)));
+    } else if (existingPoll) {
+      // il sondaggio e' stato rimosso in modifica
+      await env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(existingPoll.id).run();
+      await env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(existingPoll.id).run();
+      await env.DB.prepare(`DELETE FROM polls WHERE id = ?`).bind(existingPoll.id).run();
+    }
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
 
-export async function onRequestDelete(context) {
-  const { env, params } = context;
-  const id = params.id;
-
-  if (!env.DB) {
-    return new Response(JSON.stringify({ error: "Database not configured" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-
+export async function onRequestDelete({ params, env }) {
   try {
-    await env.DB.prepare("DELETE FROM events WHERE id = ? OR slug = ?").bind(id, id).run();
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    const poll = await env.DB.prepare(`SELECT id FROM polls WHERE event_id = ?`)
+      .bind(params.id)
+      .first();
+
+    if (poll) {
+      await env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(poll.id).run();
+      await env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(poll.id).run();
+      await env.DB.prepare(`DELETE FROM polls WHERE id = ?`).bind(poll.id).run();
+    }
+    await env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id).run();
+    await env.DB.prepare(`DELETE FROM events WHERE id = ?`).bind(params.id).run();
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
