@@ -1,5 +1,5 @@
 /* ============================================================
-   TEMA MONTAGNA MAGICO (Cielo Stellato, Stelle Cadenti e Fatine)
+   TEMA MONTAGNA DEFINITIVO (Solo Montagne Responsive)
    ============================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Sora:wght@600;700;800&display=swap');
@@ -58,16 +58,19 @@ body::before {
   display: none !important;
 }
 
-/* Sfondo Unificato: Cielo Stellato, Stelle Cadenti e Montagne */
+/* Profilo Montuoso Fissato sul Fondo */
 body::after {
   content: "";
   position: fixed;
   z-index: -3;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 260px;
   width: 100%;
-  height: 100vh;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1420 900' preserveAspectRatio='none'%3E%3C!-- STELLE A 4 PUNTE BEN DEFINITE --%3E%3Cg fill='%23626a64'%3E%3Cpath opacity='.55' d='M140 80 L143 90 L153 93 L143 96 L140 106 L137 96 L127 93 L137 90 Z'/%3E%3Cpath opacity='.45' d='M450 140 L452 147 L459 149 L452 151 L450 158 L448 151 L441 149 L448 147 Z'/%3E%3Cpath opacity='.6' d='M780 70 L783 82 L795 85 L783 88 L780 100 L777 88 L765 85 L777 82 Z'/%3E%3Cpath opacity='.4' d='M1080 120 L1082 126 L1088 128 L1082 130 L1080 136 L1078 130 L1072 128 L1078 126 Z'/%3E%3Cpath opacity='.5' d='M1300 90 L1303 99 L1312 102 L1303 105 L1300 114 L1297 105 L1288 102 L1297 99 Z'/%3E%3C!-- PUNTI LUCE/STELLE MINORI --%3E%3Ccircle cx='280' cy='160' r='2' opacity='.45'/%3E%3Ccircle cx='620' cy='190' r='2.5' opacity='.5'/%3E%3Ccircle cx='940' cy='210' r='2' opacity='.4'/%3E%3Ccircle cx='1190' cy='170' r='2.5' opacity='.5'/%3E%3Ccircle cx='80' cy='220' r='1.8' opacity='.35'/%3E%3C/g%3E%3C!-- STELLE CADENTI CON ORIENTAMENTO CORRETTO (Caduta dall'alto a SX verso il basso a DX) --%3E%3Cg opacity='.45'%3E%3C!-- Stella Cadente 1 (Sinistra) --%3E%3Cline x1='160' y1='50' x2='240' y2='105' stroke='%23747a73' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='240' cy='105' r='3' fill='%234c5550'/%3E%3C!-- Stella Cadente 2 (Destra) --%3E%3Cline x1='900' y1='40' x2='990' y2='100' stroke='%23747a73' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='990' cy='100' r='3.5' fill='%234c5550'/%3E%3C!-- Stella Cadente 3 (Piccola - Centro) --%3E%3Cline x1='1180' y1='110' x2='1240' y2='150' stroke='%23747a73' stroke-width='1.5' stroke-linecap='round'/%3E%3Ccircle cx='1240' cy='150' r='2.2' fill='%234c5550'/%3E%3C/g%3E%3C!-- MONTAGNE IN BASSO --%3E%3Cg transform='translate(0, 610)'%3E%3Cpath fill='%23747a73' opacity='.17' d='M0 210 L160 80 L250 140 L410 20 L560 170 L680 90 L810 180 L1020 10 L1200 170 L1310 100 L1420 200 V290 H0 Z'/%3E%3Cpath fill='%234c5550' opacity='.20' d='M0 240 L210 120 L340 190 L550 90 L710 190 L890 110 L1060 210 L1280 80 L1420 160 V290 H0 Z'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: .22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1420' height='260' viewBox='0 0 1420 260' preserveAspectRatio='none'%3E%3Cpath fill='%23747a73' d='M0 180 L160 60 L250 120 L410 10 L560 150 L680 70 L810 160 L1020 0 L1200 150 L1310 80 L1420 180 V260 H0 Z'/%3E%3Cpath fill='%234c5550' d='M0 210 L210 90 L340 160 L550 70 L710 170 L890 90 L1060 180 L1280 60 L1420 140 V260 H0 Z' opacity='.85'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -559,7 +562,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 @media (max-width: 1023px) {
   body::after {
-    height: 220px;
+    height: 200px;
   }
 }
 
@@ -569,7 +572,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
 @media (max-width: 760px) {
   body::after { 
-    height: 150px; 
+    height: 140px; 
     opacity: .18; 
   }
   
