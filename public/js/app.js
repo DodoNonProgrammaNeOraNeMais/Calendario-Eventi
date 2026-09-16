@@ -109,10 +109,10 @@ function showDayEvents(iso, dayEvents) {
           ${dayEvents
             .map(
               (e) => `
-            <div class="event-card" data-slug="${e.slug}" style="cursor: pointer; display: flex; align-items: center; gap: 1rem;">
-              ${e.image_url ? `<img src="${e.image_url}" alt="" class="list-thumb" style="width:60px; height:60px; object-fit:cover; border-radius:8px; cursor:zoom-in;">` : ""}
-              <div class="event-card-body" style="flex:1;"><h3>${escapeHtml(e.title)}</h3></div>
-            </div>`
+            <button type="button" class="event-card" data-slug="${e.slug}" style="width: 100%; border: none; background: inherit; cursor: pointer;">
+              ${e.image_url ? `<img src="${e.image_url}" alt="" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">` : ""}
+              <div class="event-card-body" style="flex:1; text-align: left;"><h3>${escapeHtml(e.title)}</h3></div>
+            </button>`
             )
             .join("")}
         </div>
@@ -122,17 +122,8 @@ function showDayEvents(iso, dayEvents) {
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) root.innerHTML = ""; });
   modal.querySelector("[data-close]").addEventListener("click", () => (root.innerHTML = ""));
   
-  modal.querySelectorAll(".event-card").forEach((el) => {
-    const slug = el.dataset.slug;
-    const thumb = el.querySelector(".list-thumb");
-    
-    if (thumb) {
-      thumb.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        openImageFullscreen(thumb.src);
-      });
-    }
-    el.addEventListener("click", () => openEventModal(slug));
+  modal.querySelectorAll("[data-slug]").forEach((el) => {
+    el.addEventListener("click", () => openEventModal(el.dataset.slug));
   });
 
   root.appendChild(backdrop);
@@ -163,22 +154,15 @@ async function loadUpcoming() {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "event-card";
+    // L'immagine qui è pura anteprima visiva: il click sull'intera card apre correttamente i dettagli
     card.innerHTML = `
-      ${e.image_url ? `<img src="${e.image_url}" alt="" class="upcoming-thumb">` : ""}
+      ${e.image_url ? `<img src="${e.image_url}" alt="" style="pointer-events: none;">` : ""}
       <div class="event-card-body">
         <div class="event-date">${formatDateRange(e.start_date, e.end_date)}</div>
         <h3>${escapeHtml(e.title)}</h3>
         ${e.description ? `<p>${escapeHtml(e.description)}</p>` : ""}
       </div>`;
     
-    const thumb = card.querySelector(".upcoming-thumb");
-    if (thumb) {
-      thumb.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        openImageFullscreen(thumb.src);
-      });
-    }
-
     card.addEventListener("click", () => openEventModal(e.slug));
     list.appendChild(card);
   });
