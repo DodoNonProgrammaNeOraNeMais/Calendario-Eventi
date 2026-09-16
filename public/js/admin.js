@@ -22,7 +22,7 @@ document.getElementById("image-input").addEventListener("change", async (e) => {
     const data = await res.json();
     uploadedImageKey = data.key;
     const preview = document.getElementById("image-preview");
-    preview.src = data.url;
+    preview.src = data.url || `/api/images/${data.key}`;
     preview.style.display = "block";
     drop.textContent = "Cambia immagine";
   } catch (err) {
@@ -176,7 +176,7 @@ async function loadAdminEvents() {
 
   list.innerHTML = "";
   events.forEach((e) => {
-    // Risolve l'URL dell'immagine se presente come URL completo o come key
+    // Risoluzione flessibile dell'immagine (URL completo o endpoint /api/images/key)
     let imgSrc = e.image_url;
     if (!imgSrc && e.image_key) {
       imgSrc = e.image_key.startsWith("http") ? e.image_key : `/api/images/${e.image_key}`;
@@ -208,14 +208,6 @@ async function loadAdminEvents() {
   });
 }
 
-  list.querySelectorAll("[data-edit]").forEach((btn) => {
-    btn.addEventListener("click", () => startEdit(btn.dataset.edit, btn.dataset.slug));
-  });
-  list.querySelectorAll("[data-delete]").forEach((btn) => {
-    btn.addEventListener("click", () => deleteEvent(btn.dataset.delete));
-  });
-}
-
 async function startEdit(id, slug) {
   const event = await apiGet(`/api/events/${slug}`);
   editingId = id;
@@ -228,8 +220,13 @@ async function startEdit(id, slug) {
   document.getElementById("participants").value = (event.participants || []).join("\n");
 
   const preview = document.getElementById("image-preview");
-  if (event.image_url) {
-    preview.src = event.image_url;
+  let imgSrc = event.image_url;
+  if (!imgSrc && event.image_key) {
+    imgSrc = event.image_key.startsWith("http") ? event.image_key : `/api/images/${event.image_key}`;
+  }
+
+  if (imgSrc) {
+    preview.src = imgSrc;
     preview.style.display = "block";
     document.getElementById("image-drop").textContent = "Cambia immagine";
   } else {
