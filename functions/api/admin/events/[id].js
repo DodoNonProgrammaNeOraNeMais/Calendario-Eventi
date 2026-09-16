@@ -12,6 +12,7 @@ export async function onRequestPut(context) {
   try {
     const data = await request.json();
     const participantsJson = JSON.stringify(data.participants || []);
+    const imgValue = data.image_url !== undefined ? data.image_url : (data.image_key !== undefined ? data.image_key : null);
 
     await env.DB.prepare(`
       UPDATE events 
@@ -19,7 +20,7 @@ export async function onRequestPut(context) {
           description = COALESCE(?, description), 
           start_date = COALESCE(?, start_date), 
           end_date = COALESCE(?, end_date), 
-          image_url = COALESCE(?, image_url), 
+          image_key = COALESCE(?, image_key), 
           participants = ?
       WHERE id = ? OR slug = ?
     `).bind(
@@ -27,7 +28,7 @@ export async function onRequestPut(context) {
       data.description !== undefined ? data.description : null,
       data.start_date || null,
       data.end_date || null,
-      data.image_url !== undefined ? data.image_url : null,
+      imgValue,
       participantsJson,
       id,
       id
