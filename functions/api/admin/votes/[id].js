@@ -3,12 +3,11 @@ export async function onRequestPut(context) {
   const voteId = params.id;
 
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
 
     if (body.action === 'accept') {
-      // 1. Recupera i dettagli del voto prima di aggiornarlo
       const vote = await env.DB.prepare(
-        "SELECT event_id, user_name FROM votes WHERE id = ?"
+        "SELECT event_id, voter_name, user_name FROM votes WHERE id = ?"
       ).bind(voteId).first();
 
       if (!vote) {
@@ -18,17 +17,16 @@ export async function onRequestPut(context) {
         });
       }
 
-      // 2. Imposta lo stato del voto su 'accepted'
       await env.DB.prepare(
         "UPDATE votes SET status = 'accepted' WHERE id = ?"
       ).bind(voteId).run();
 
-      // 3. Recupera l'evento corrente per aggiornare i partecipanti
+      const userName = vote.voter_name || vote.user_name;
       const event = await env.DB.prepare(
         "SELECT participants FROM events WHERE id = ?"
       ).bind(vote.event_id).first();
 
-      if (event) {
+      if (event && userName) {
         let currentParticipants = [];
         if (event.participants) {
           try {
@@ -40,32 +38,22 @@ export async function onRequestPut(context) {
           }
         }
 
-        // Aggiunge il partecipante se non è già presente in lista
-        if (!currentParticipants.includes(vote.user_name)) {
-          currentParticipants.push(vote.user_name);
-          const updatedParticipantsJson = JSON.stringify(currentParticipants);
-
+        if (!currentParticipants.includes(userName)) {
+          currentParticipants.push(userName);
           await env.DB.prepare(
             "UPDATE events SET participants = ? WHERE id = ?"
-          ).bind(updatedParticipantsJson, vote.event_id).run();
+          ).bind(JSON.stringify(currentParticipants), vote.event_id).run();
         }
       }
 
-      return new Response(JSON.stringify({ success: true, status: 'accepted' }), {
+      return new Response(JSON.stringify({ success: true }), {
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    return new Response(JSON.stringify({ error: "Azione non valida" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    });
-
+    return new Response(JSON.stringify({ error: "Azione non valida" }), { status: 400 });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
 
@@ -74,18 +62,11 @@ export async function onRequestDelete(context) {
   const voteId = params.id;
 
   try {
-    // Cancella o rifiuta la richiesta eliminandola dalla tabella votes
-    const result = await env.DB.prepare(
-      "DELETE FROM votes WHERE id = ?"
-    ).bind(voteId).run();
-
-    return new Response(JSON.stringify({ success: true, deleted: result.meta.changes }), {
+    await env.DB.prepare("DELETE FROM votes WHERE id = ?").bind(voteId).run();
+    return new Response(JSON.stringify({ success: true }), {
       headers: { "Content-Type": "application/json" }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
