@@ -49,10 +49,6 @@ body {
   padding: 0;
   color: var(--ink);
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='%23626a64' opacity='.25'%3E%3Ccircle cx='40' cy='50' r='1.5'/%3E%3Ccircle cx='180' cy='90' r='1'/%3E%3Ccircle cx='320' cy='40' r='2'/%3E%3Ccircle cx='120' cy='180' r='1.2'/%3E%3Ccircle cx='280' cy='220' r='1.5'/%3E%3Ccircle cx='70' cy='290' r='1'/%3E%3Ccircle cx='230' cy='310' r='2'/%3E%3Ccircle cx='360' cy='160' r='1.2'/%3E%3Ccircle cx='150' cy='360' r='1.5'/%3E%3Cpath d='M220 50h-4v-4h4v4zm0 0' stroke='%23626a64' stroke-width='.8'/%3E%3Cpath d='M90 120v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3Cpath d='M310 280v4h-4v-4h4z' stroke='%23626a64' stroke-width='.6'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 400px 400px;
-  background-attachment: fixed;
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
@@ -610,7 +606,6 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
     opacity: .18; 
   }
 
-  /* Niente restrizioni fisse: la modale scorre liberamente dall'alto mostrando tutto */
   .modal-backdrop {
     padding: 12px 6px 40px 6px;
     align-items: flex-start;
