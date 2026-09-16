@@ -11,6 +11,7 @@ function initAdmin() {
   loadPendingVotes();
   setupImageUpload();
   setupFormListeners();
+  setupPollOptionButtons();
 }
 
 // ------------------------------------------------------------
@@ -54,7 +55,6 @@ async function loadPendingVotes() {
   }
 }
 
-// Accetta la risposta e inserisce l'utente nei partecipanti
 window.acceptVote = async function(voteId) {
   try {
     const res = await fetch(`/api/admin/votes/${voteId}`, {
@@ -79,7 +79,6 @@ window.acceptVote = async function(voteId) {
   }
 };
 
-// Rifiuta e cancella la richiesta dal database
 window.rejectVote = async function(voteId) {
   if (!confirm('Sei sicuro di voler rifiutare e cancellare questa risposta?')) return;
 
@@ -102,7 +101,7 @@ window.rejectVote = async function(voteId) {
 };
 
 // ------------------------------------------------------------
-// 2. GESTIONE CARICAMENTO ED ELIMINAZIONE EVENTI
+// 2. CREAZIONE ED ELIMINAZIONE EVENTI
 // ------------------------------------------------------------
 
 async function loadAdminEvents() {
@@ -138,6 +137,63 @@ async function loadAdminEvents() {
   }
 }
 
+function setupFormListeners() {
+  const form = document.getElementById('event-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const hasPollToggle = document.getElementById('has-poll');
+    const hasPoll = hasPollToggle ? hasPollToggle.checked : false;
+
+    // Raccoglie le opzioni del sondaggio se abilitato
+    const pollOptions = [];
+    if (hasPoll) {
+      const optionInputs = document.querySelectorAll('.option-row input');
+      optionInputs.forEach(input => {
+        if (input.value.trim() !== '') {
+          pollOptions.push(input.value.trim());
+        }
+      });
+    }
+
+    const eventPayload = {
+      title: formData.get('title'),
+      description: formData.get('description'),
+      start_date: formData.get('start_date'),
+      end_date: formData.get('end_date'),
+      image_url: formData.get('image_url') || document.getElementById('image-url')?.value || '',
+      has_poll: hasPoll,
+      poll_question: hasPoll ? (formData.get('poll_question') || 'Ci sei brodi?') : null,
+      poll_deadline: hasPoll ? formData.get('poll_deadline') : null,
+      poll_options: pollOptions
+    };
+
+    try {
+      const res = await fetch('/api/admin/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventPayload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Errore durante la creazione');
+      }
+
+      showToast('Evento creato con successo!');
+      form.reset();
+      const dropZone = document.querySelector('.image-drop');
+      if (dropZone) dropZone.textContent = 'Clicca o trascina qui un\'immagine';
+      loadAdminEvents();
+    } catch (err) {
+      alert('Errore creazione evento: ' + err.message);
+    }
+  });
+}
+
 window.deleteEvent = async function(eventId) {
   if (!confirm('Sei sicuro di voler eliminare definitivamente questo evento?')) return;
 
@@ -155,8 +211,25 @@ window.deleteEvent = async function(eventId) {
 };
 
 // ------------------------------------------------------------
-// 3. UPLOAD IMMAGINI (DRAG & DROP / CLICK)
+// 3. GESTIONE OPZIONI SONDAGGIO E UPLOAD IMMAGINI
 // ------------------------------------------------------------
+
+function setupPollOptionButtons() {
+  const addBtn = document.getElementById('add-option-btn');
+  const container = document.getElementById('poll-options-container');
+
+  if (addBtn && container) {
+    addBtn.addEventListener('click', () => {
+      const row = document.createElement('div');
+      row.className = 'option-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Nuova Opzione" required>
+        <button type="button" onclick="this.parentElement.remove()">Rimuovi</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+}
 
 function setupImageUpload() {
   const dropZone = document.querySelector('.image-drop');
@@ -173,16 +246,13 @@ function setupImageUpload() {
     document.body.appendChild(fileInput);
   }
 
-  dropZone.addEventListener('click', () => {
-    fileInput.click();
-  });
+  dropZone.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const formData = new FormData();
-    // Usa 'image' per essere compatibile con l'API backend /upload
     formData.append('image', file);
 
     try {
@@ -192,10 +262,7 @@ function setupImageUpload() {
         body: formData
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || 'Errore durante il caricamento');
-      }
+      if (!res.ok) throw new Error('Errore durante l\'upload');
 
       const data = await res.json();
       const imageUrl = data.url || data.imageUrl || data.key;
@@ -214,15 +281,6 @@ function setupImageUpload() {
 // ------------------------------------------------------------
 // 4. UTILITIES
 // ------------------------------------------------------------
-
-function setupFormListeners() {
-  const form = document.getElementById('event-form');
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      // Form di salvataggio eventi predefinito
-    });
-  }
-}
 
 function showToast(message) {
   const toast = document.createElement('div');
