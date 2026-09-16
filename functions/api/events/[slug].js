@@ -64,6 +64,8 @@ export async function onRequestGet(context) {
     };
   }
 
+  const imageUrl = event.image_key || event.image_url || "";
+
   const result = {
     id: event.id,
     slug: event.slug,
@@ -71,7 +73,8 @@ export async function onRequestGet(context) {
     description: event.description,
     start_date: event.start_date,
     end_date: event.end_date,
-    image_url: event.image_url,
+    image_key: imageUrl,
+    image_url: imageUrl,
     participants,
     poll: pollData
   };
