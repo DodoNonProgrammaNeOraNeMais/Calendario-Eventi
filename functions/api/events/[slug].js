@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
 
   let participants = [];
   try {
-    participants = JSON.parse(event.participants || "[]");
+    participants = typeof event.participants === "string" ? JSON.parse(event.participants || "[]") : (event.participants || []);
   } catch (e) {
     participants = [];
   }
@@ -30,13 +30,12 @@ export async function onRequestGet(context) {
   let pollData = null;
 
   if (poll) {
-    // Recupera le opzioni con il conteggio dei voti e l'elenco dei nomi dei votanti
     const { results: options } = await env.DB.prepare(`
       SELECT 
         po.id, 
         po.label, 
         COUNT(v.id) as votes,
-        GROUP_CONCAT(v.voter_name, '|||') as voters_raw
+        GROUP_CONCAT(COALESCE(v.voter_name, 'Anonimo'), '|||') as voters_raw
       FROM poll_options po
       LEFT JOIN votes v ON po.id = v.option_id
       WHERE po.poll_id = ?
