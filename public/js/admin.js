@@ -1,106 +1,327 @@
-document.addEventListener('DOMContentLoaded', () => {
-  initAdmin();
+let uploadedImageKey = null;
+let editingId = null;
+
+const form = document.getElementById("event-form");
+const banner = document.getElementById("banner");
+
+document.getElementById("image-drop").addEventListener("click", () => document.getElementById("image-input").click());
+
+document.getElementById("image-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const drop = document.getElementById("image-drop");
+  const previousText = drop.textContent;
+  drop.textContent = "Caricamento in corso...";
+
+  const formData = new FormData();
+  formData.append("image", file);
+
+  try {
+    const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    uploadedImageKey = data.key;
+    const preview = document.getElementById("image-preview");
+    preview.src = data.url;
+    preview.style.display = "block";
+    drop.textContent = "Cambia immagine";
+  } catch (err) {
+    showToast("Caricamento immagine non riuscito");
+    drop.textContent = previousText;
+  }
 });
 
-function initAdmin() {
-  loadAdminEvents();
-  loadPendingVotes();
+document.getElementById("poll-toggle").addEventListener("change", (e) => {
+  document.getElementById("poll-fields").style.display = e.target.checked ? "block" : "none";
+});
+
+function addOptionRow(value = "") {
+  const container = document.getElementById("poll-options");
+  const row = document.createElement("div");
+  row.className = "option-row";
+  row.innerHTML = `<input type="text" value="${escapeHtml(value)}" placeholder="Opzione"><button type="button" aria-label="Rimuovi opzione">&times;</button>`;
+  row.querySelector("button").addEventListener("click", () => {
+    if (container.children.length > 2) row.remove();
+    else showToast("Servono almeno due opzioni");
+  });
+  container.appendChild(row);
 }
+document.getElementById("add-option").addEventListener("click", () => addOptionRow());
+
+function resetOptions() {
+  document.getElementById("poll-options").innerHTML = "";
+  addOptionRow();
+  addOptionRow();
+}
+resetOptions();
+
+document.getElementById("cancel-edit").addEventListener("click", resetForm);
+
+function resetForm() {
+  editingId = null;
+  uploadedImageKey = null;
+  form.reset();
+  document.getElementById("image-preview").style.display = "none";
+  document.getElementById("image-drop").textContent = "Clicca per scegliere un'immagine (opzionale)";
+  document.getElementById("poll-toggle").checked = false;
+  document.getElementById("poll-fields").style.display = "none";
+  resetOptions();
+  document.getElementById("submit-btn").textContent = "Crea evento";
+  document.getElementById("cancel-edit").style.display = "none";
+  
+  const votesContainer = document.getElementById("admin-votes-container");
+  if (votesContainer) votesContainer.remove();
+  
+  banner.innerHTML = "";
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const title = document.getElementById("title").value.trim();
+  const startDate = document.getElementById("start-date").value;
+  const endDate = document.getElementById("end-date").value;
+  const description = document.getElementById("description").value.trim();
+  const participants = document
+    .getElementById("participants")
+    .value.split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (!title || !startDate || !endDate) {
+    showToast("Compila titolo e date");
+    return;
+  }
+  if (endDate < startDate) {
+    showToast("La data di fine non puo' essere prima dell'inizio");
+    return;
+  }
+
+  let poll = null;
+  const pollToggle = document.getElementById("poll-toggle");
+  if (pollToggle && pollToggle.checked) {
+    const questionEl = document.getElementById("poll-question");
+    const deadlineEl = document.getElementById("poll-deadline");
+    const question = questionEl ? questionEl.value.trim() : "";
+    const deadlineValue = deadlineEl ? deadlineEl.value : "";
+    const optionInputs = Array.from(document.querySelectorAll("#poll-options input"));
+    const options = optionInputs.map((i) => i.value.trim()).filter(Boolean);
+
+    if (!question || !deadlineValue || options.length < 2) {
+      showToast("Completa domanda, scadenza e almeno due opzioni del sondaggio");
+      return;
+    }
+
+    const deadlineDate = new Date(deadlineValue);
+    if (isNaN(deadlineDate.getTime())) {
+      showToast("La data di scadenza del sondaggio non e' valida");
+      return;
+    }
+
+    poll = {
+      question: question,
+      deadline: deadlineDate.toISOString(),
+      options: options,
+    };
+  }
+
+  const payload = {
+    title,
+    description,
+    start_date: startDate,
+    end_date: endDate,
+    image_key: uploadedImageKey,
+    participants,
+    poll,
+  };
+
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = true;
+
+  try {
+    const url = editingId ? `/api/admin/events/${editingId}` : "/api/admin/events";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    banner.innerHTML = `<div class="banner success">Evento salvato.</div>`;
+    resetForm();
+    loadAdminEvents();
+  } catch (err) {
+    banner.innerHTML = `<div class="banner error">Non e' stato possibile salvare l'evento. Riprova.</div>`;
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
 
 async function loadAdminEvents() {
-  const container = document.getElementById('admin-events-list');
-  if (!container) return;
+  const list = document.getElementById("admin-event-list");
+  list.innerHTML = "Caricamento...";
 
+  let events = [];
   try {
-    const res = await fetch('/api/admin/events');
-    if (!res.ok) return;
-    const events = await res.json();
-    
-    if (!events || events.length === 0) {
-      container.innerHTML = '<p class="empty-state">Nessun evento presente.</p>';
-      return;
-    }
-
-    container.innerHTML = events.map(e => `
-      <div class="admin-event-row">
-        ${e.image_url ? `<img src="${e.image_url}" alt="Cover">` : '<div style="width:48px;height:48px;background:var(--pine-soft);border-radius:var(--radius-sm)"></div>'}
-        <div class="info">
-          <div class="title">${escapeHtml(e.title)}</div>
-          <div class="dates">${formatDate(e.start_date)} - ${formatDate(e.end_date)}</div>
-        </div>
-        <div class="row-actions">
-          <button type="button" class="danger" onclick="deleteEvent('${e.id}')">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error(err);
+    events = await apiGet("/api/events?from=2000-01-01&to=2100-01-01");
+  } catch (e) {
+    list.innerHTML = `<p class="empty-state">Non e' stato possibile caricare gli eventi.</p>`;
+    return;
   }
-}
 
-async function loadPendingVotes() {
-  const container = document.getElementById('pending-votes-list');
-  if (!container) return;
-
-  try {
-    const res = await fetch('/api/admin/votes');
-    if (!res.ok) return;
-    const votes = await res.json();
-    const pendingVotes = (votes || []).filter(v => v.status === 'pending');
-
-    if (pendingVotes.length === 0) {
-      container.innerHTML = '<p class="empty-state">Nessuna richiesta in sospeso.</p>';
-      return;
-    }
-
-    container.innerHTML = pendingVotes.map(v => `
-      <div class="admin-event-row" id="vote-row-${v.id}">
-        <div class="info">
-          <div class="title">${escapeHtml(v.voter_name || v.user_name || 'Utente')}</div>
-          <div class="dates">Sondaggio / Richiesta in attesa</div>
-        </div>
-        <div class="row-actions">
-          <button type="button" onclick="acceptVote('${v.id}')">Accetta</button>
-          <button type="button" class="danger" onclick="rejectVote('${v.id}')">Rifiuta</button>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error(err);
+  if (!events.length) {
+    list.innerHTML = `<p class="empty-state">Ancora nessun evento creato.</p>`;
+    return;
   }
-}
 
-window.acceptVote = async function(voteId) {
-  const res = await fetch(`/api/admin/votes/${voteId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'accept' })
+  list.innerHTML = "";
+  events.forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "admin-event-row";
+    row.innerHTML = `
+      ${e.image_url ? `<img src="${e.image_url}" alt="">` : `<div style="width:46px;height:46px;border-radius:6px;background:#efece1;flex-shrink:0;"></div>`}
+      <div class="info">
+        <div class="title">${escapeHtml(e.title)}</div>
+        <div class="dates">${formatDateRange(e.start_date, e.end_date)}</div>
+      </div>
+      <div class="row-actions">
+        <a href="/evento/${e.slug}" target="_blank" style="text-decoration: none;">
+          <button type="button" class="secondary">Vedi Evento</button>
+        </a>
+        <button type="button" class="secondary" data-edit="${e.id}" data-slug="${e.slug}">Modifica</button>
+        <button type="button" class="danger" data-delete="${e.id}">Elimina</button>
+      </div>`;
+    list.appendChild(row);
   });
-  if (res.ok) {
-    loadPendingVotes();
+
+  list.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => startEdit(btn.dataset.edit, btn.dataset.slug));
+  });
+  list.querySelectorAll("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", () => deleteEvent(btn.dataset.delete));
+  });
+}
+
+async function startEdit(id, slug) {
+  const event = await apiGet(`/api/events/${slug}`);
+  editingId = id;
+  uploadedImageKey = null;
+
+  document.getElementById("title").value = event.title;
+  document.getElementById("start-date").value = event.start_date;
+  document.getElementById("end-date").value = event.end_date;
+  document.getElementById("description").value = event.description || "";
+  document.getElementById("participants").value = (event.participants || []).join("\n");
+
+  const preview = document.getElementById("image-preview");
+  if (event.image_url) {
+    preview.src = event.image_url;
+    preview.style.display = "block";
+    document.getElementById("image-drop").textContent = "Cambia immagine";
+  } else {
+    preview.style.display = "none";
+    document.getElementById("image-drop").textContent = "Clicca per scegliere un'immagine (opzionale)";
+  }
+
+  document.getElementById("poll-options").innerHTML = "";
+  
+  let votesContainer = document.getElementById("admin-votes-container");
+  if (!votesContainer) {
+    votesContainer = document.createElement("div");
+    votesContainer.id = "admin-votes-container";
+    votesContainer.style.marginTop = "20px";
+    document.getElementById("poll-fields").appendChild(votesContainer);
+  }
+  votesContainer.innerHTML = "";
+
+  if (event.poll) {
+    document.getElementById("poll-toggle").checked = true;
+    document.getElementById("poll-fields").style.display = "block";
+    document.getElementById("poll-question").value = event.poll.question;
+    document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
+    event.poll.options.forEach((o) => addOptionRow(o.label));
+
+    if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
+      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Voti Ricevuti (Gestione)</h4>`;
+      event.poll.detailedVotes.forEach(v => {
+        const row = document.createElement("div");
+        row.style.marginBottom = "8px";
+        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato: <i>${escapeHtml(v.option_label)}</i> 
+                         <button type="button" class="danger" style="padding:2px 6px; margin-left:10px; font-size:12px;" onclick="deleteVote(${v.vote_id}, '${slug}')">Rifiuta</button>`;
+        votesContainer.appendChild(row);
+      });
+    }
+  } else {
+    document.getElementById("poll-toggle").checked = false;
+    document.getElementById("poll-fields").style.display = "none";
+    addOptionRow();
+    addOptionRow();
+  }
+
+  document.getElementById("submit-btn").textContent = "Salva modifiche";
+  document.getElementById("cancel-edit").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function toLocalDatetimeInputValue(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function deleteEvent(id) {
+  if (!confirm("Eliminare questo evento? L'azione non si puo' annullare.")) return;
+  try {
+    const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error(await res.text());
+    if (editingId === id) resetForm();
     loadAdminEvents();
+  } catch (err) {
+    showToast("Non e' stato possibile eliminare l'evento");
   }
-};
-
-window.rejectVote = async function(voteId) {
-  const res = await fetch(`/api/admin/votes/${voteId}`, { method: 'DELETE' });
-  if (res.ok) {
-    loadPendingVotes();
-  }
-};
-
-window.deleteEvent = async function(eventId) {
-  if (!confirm('Eliminare l\'evento?')) return;
-  const res = await fetch(`/api/admin/events/${eventId}`, { method: 'DELETE' });
-  if (res.ok) loadAdminEvents();
-};
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
-function escapeHtml(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+window.deleteVote = async function(voteId, slug) {
+  if (!confirm("Vuoi rifiutare e annullare questo voto?")) return;
+  try {
+    const res = await fetch(`/api/admin/votes/${voteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error("Errore");
+    showToast("Voto rimosso con successo");
+    startEdit(editingId, slug); 
+  } catch(e) {
+    showToast("Errore durante l'eliminazione");
+  }
 }
+
+loadAdminEvents();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("app");
+  if (!root) return;
+  const slug = root.dataset.slug;
+  if (!slug) return;
+
+  const topbar = document.createElement("header");
+  topbar.className = "topbar";
+  topbar.innerHTML = `<a class="brand" href="/">Calendario eventi</a>`;
+  document.body.prepend(topbar);
+
+  const container = document.createElement("div");
+  container.id = "event-container";
+  root.appendChild(container);
+
+  async function load() {
+    try {
+      const event = await apiGet(`/api/events/${slug}`);
+      container.innerHTML = "";
+      const card = document.createElement("div");
+      card.className = "modal standalone-card";
+      card.appendChild(renderEventDetail(event, load, { showClose: false }));
+      container.appendChild(card);
+    } catch (e) {
+      container.innerHTML = `<p class="empty-state">Evento non trovato.</p>`;
+    }
+  }
+
+  load();
+});
