@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS votes (
   option_id INTEGER NOT NULL REFERENCES poll_options(id),
   voter_token TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  voter_name TEXT,            -- nome inserito da chi vota, mostrato nel dettaglio evento e nel pannello admin
   UNIQUE(poll_id, voter_token)  -- un solo voto per persona per sondaggio (si aggiorna, non si duplica)
 );
 
