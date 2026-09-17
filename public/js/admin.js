@@ -228,7 +228,8 @@ async function startEdit(id, slug) {
     document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
 
     if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
-      const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no");
+      // Chi è già stato accettato compare nei Partecipanti qui sopra: non serve più mostrarlo tra le richieste.
+      const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no" && v.status !== "accepted");
       const noVotes = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() === "no");
             const nameCounts = {};
       event.poll.detailedVotes.forEach(v => {
@@ -236,7 +237,7 @@ async function startEdit(id, slug) {
         nameCounts[key] = (nameCounts[key] || 0) + 1;
       });
 
-      const statusLabel = { pending: "In attesa", accepted: "Accettato ✅", rejected: "Rifiutato ❌" };
+      const statusLabel = { pending: "In attesa", rejected: "Rifiutato ❌" };
 
       votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Richieste di partecipazione</h4>`;
 
@@ -247,10 +248,13 @@ async function startEdit(id, slug) {
       toReview.forEach(v => {
         const row = document.createElement("div");
         row.style.marginBottom = "8px";
-        const acceptBtn = v.status !== "accepted"
+        // Una volta rifiutata, la richiesta resta solo come storico: si può tornare ad "accettato"
+        // solo se è la persona stessa a rivotare (il voto torna "in attesa" automaticamente).
+        const isPending = v.status === "pending";
+        const acceptBtn = isPending
           ? `<button type="button" class="secondary" style="padding:2px 8px; margin-left:10px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'accepted', '${slug}')">Accetta</button>`
           : "";
-        const rejectBtn = v.status !== "rejected"
+        const rejectBtn = isPending
           ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'rejected', '${slug}')">Rifiuta</button>`
           : "";
                const isDuplicateName = nameCounts[v.voter_name.trim().toLowerCase()] > 1;

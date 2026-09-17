@@ -12,7 +12,7 @@ export async function onRequestPatch({ params, request, env }) {
     }
 
     const vote = await env.DB.prepare(
-      `SELECT v.id, v.voter_name, po.label AS option_label, p.event_id
+      `SELECT v.id, v.voter_name, v.status, po.label AS option_label, p.event_id
        FROM votes v
        JOIN poll_options po ON po.id = v.option_id
        JOIN polls p ON p.id = v.poll_id
@@ -23,6 +23,12 @@ export async function onRequestPatch({ params, request, env }) {
 
     if (status === "accepted" && vote.option_label.trim().toLowerCase() === "no") {
       return Response.json({ error: "Non si può accettare un voto 'No'" }, { status: 400 });
+    }
+
+    // Una richiesta rifiutata non può essere riaccettata dall'admin: l'unico modo per
+    // rimetterla in gioco è che la persona stessa rivoti (il che riporta il voto a "pending").
+    if (status === "accepted" && vote.status === "rejected") {
+      return Response.json({ error: "Richiesta già rifiutata: può essere riconsiderata solo se la persona rivota" }, { status: 400 });
     }
 
     const statements = [

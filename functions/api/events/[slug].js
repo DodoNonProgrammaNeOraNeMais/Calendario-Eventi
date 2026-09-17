@@ -9,10 +9,12 @@ export async function onRequestGet({ params, env, request }) {
 
   let pollData = null;
   if (poll) {
+    // Chi è già stato accettato è confermato tra i partecipanti dell'evento:
+    // non serve più elencarlo anche qui tra chi ha risposto al sondaggio.
     const { results: options } = await env.DB.prepare(
       `SELECT po.id, po.label, GROUP_CONCAT(v.voter_name, ', ') AS voters, COUNT(v.id) AS votes
        FROM poll_options po
-       LEFT JOIN votes v ON v.option_id = po.id
+       LEFT JOIN votes v ON v.option_id = po.id AND v.status != 'accepted'
        WHERE po.poll_id = ?
        GROUP BY po.id
        ORDER BY po.id`
