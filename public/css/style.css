@@ -523,7 +523,7 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 .toggle-row label { margin: 0; font-weight: 700; }
 
 .admin-event-row {
-  display: flex; align-items: center; gap: 0.9rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.9rem;
   padding: 0.8rem 0;
   border-bottom: 1px solid var(--border);
 }
@@ -535,10 +535,14 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
   background: var(--pine-soft);
   flex-shrink: 0;
 }
-.admin-event-row .info { flex: 1; min-width: 0; }
-.admin-event-row .info .title { font-weight: 700; font-size: 0.92rem; }
+.admin-event-row .info { flex: 1 1 160px; min-width: 0; }
+.admin-event-row .info .title { font-weight: 700; font-size: 0.92rem; word-break: break-word; }
 .admin-event-row .info .dates { font-size: 0.8rem; color: var(--ink-soft); }
-.admin-event-row .row-actions { display: flex; gap: 0.35rem; }
+.admin-event-row .row-actions {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+  flex: 1 0 100%;
+  margin-left: calc(48px + 0.9rem); /* allinea sotto al testo, non sotto l'immagine */
+}
 .admin-event-row .row-actions button { padding: 0.4em 0.7em; font-size: 0.82rem; }
 
 .banner {
