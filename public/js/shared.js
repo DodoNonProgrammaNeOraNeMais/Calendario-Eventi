@@ -1,7 +1,3 @@
-// Funzioni condivise tra le pagine pubbliche
-
-// Site key pubblica di Cloudflare Turnstile (Dashboard > Turnstile > il tuo widget).
-// E' un valore PUBBLICO, va bene lasciarlo nel codice client-side.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
@@ -167,12 +163,6 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     </div>
   `;
 
-    // Turnstile: rendering esplicito perché il markup viene inserito dinamicamente (SPA).
-  // Il render viene rimandato al tick successivo: il chiamante (openEventModal/event.js)
-  // aggancia "wrap" al documento SUBITO DOPO che questa funzione ritorna, quindi al momento
-  // del setTimeout il contenitore è già nella pagina (Turnstile ne ha bisogno per calcolare
-  // le dimensioni dell'iframe). Il try/catch impedisce che un problema nel widget anti-spam
-  // blocchi la visualizzazione dell'evento.
   let turnstileWidgetId = null;
   const turnstileContainer = wrap.querySelector(".turnstile-container");
   if (turnstileContainer && window.turnstile) {
@@ -209,7 +199,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       let voterName = null;
       if (!event.poll.myOptionId) {
         const nameInput = wrap.querySelector("#voter-name-input");
-               voterName = nameInput ? nameInput.value.trim() : "";
+        voterName = nameInput ? nameInput.value.trim() : "";
         if (!voterName) {
           showToast("Inserisci nome e cognome per votare!");
           if (nameInput) nameInput.focus();
@@ -246,14 +236,11 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           }),
         });
         if (!res.ok) throw new Error(await res.text());
-        
-        // Voto completato con successo
         onVoteChange && onVoteChange();
       } catch (e) {
         showToast("Non e' stato possibile registrare il voto");
         btn.disabled = false;
       } finally {
-        // ASSICURA IL RESET DEL WIDGET IN OGNI CASO (SUCCESSO O ERRORE)
         if (turnstileWidgetId !== null && window.turnstile) {
           try {
             turnstile.reset(turnstileWidgetId);
@@ -262,6 +249,8 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           }
         }
       }
+    });
+  });
 
   const removeBtn = wrap.querySelector("[data-remove-vote]");
   if (removeBtn) {
