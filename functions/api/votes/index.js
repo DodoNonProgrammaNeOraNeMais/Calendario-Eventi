@@ -2,8 +2,6 @@
 // DELETE /api/votes?pollId=... -> ritira il voto
 
 // Verifica il token Turnstile generato dal widget lato client contro l'API di Cloudflare.
-// Fondamentale: senza questo controllo il widget e' solo decorazione, chiunque puo' chiamare
-// l'endpoint direttamente (es. con curl) ignorando il frontend.
 async function verifyTurnstile(token, ip, secret) {
   if (!token || !secret) return false;
   try {
@@ -19,29 +17,12 @@ async function verifyTurnstile(token, ip, secret) {
   }
 }
 
-// Rate limiting minimo per IP, complementare a Turnstile: usa una tabella D1 (vedi schema.sql).
-// Finestra di 60 secondi, max 8 richieste per IP. Se la tabella non esiste ancora (schema non
-// aggiornato) il controllo fallisce in modo "aperto" (non blocca), per non rompere il sito.
-async function checkRateLimit(env, ip, action, max = 8) {
-  try {
-    const bucket = Math.floor(Date.now() / 60000); // finestra di 1 minuto
-    const key = `${action}:${ip || "unknown"}:${bucket}`;
-    const row = await env.DB.prepare(
-      `INSERT INTO rate_limits (bucket_key, count) VALUES (?, 1)
-       ON CONFLICT(bucket_key) DO UPDATE SET count = count + 1
-       RETURNING count`
-    ).bind(key).first();
-    return row.count <= max;
-  } catch (e) {
-    return true; // tabella assente o errore D1: non blocchiamo il voto per questo
-  }
-}
-
 export async function onRequestPost({ request, env }) {
   const ip = request.headers.get("CF-Connecting-IP");
 
-  if (!(await checkRateLimit(env, ip, "vote-post"))) {
-    return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+ if (env.RATE_LIMITER) {
+  const { success } = await env.RATE_LIMITER.limit({ key: ip || "unknown" });
+  if (!success) return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
   }
 
   const body = await request.json().catch(() => null);
@@ -71,15 +52,13 @@ export async function onRequestPost({ request, env }) {
   if (!voterName && existingVote) {
     voterName = existingVote.voter_name;
   }
-    if (!voterName) {
+  if (!voterName) {
     return new Response("Il nome è obbligatorio per votare", { status: 400 });
   }
   if (!/\S+\s+\S+/.test(voterName)) {
     return new Response("Inserisci sia il nome che il cognome (es. Mario Rossi)", { status: 400 });
   }
 
-  // L'identità del voto è determinata SOLO dal cookie del browser (voter_token), mai dal nome scritto:
-  // il nome è solo un'etichetta, non una prova di identità, quindi non deve mai permettere di sovrascrivere il voto di qualcun altro.
   await env.DB.prepare(
     `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
      ON CONFLICT(poll_id, voter_token)
@@ -88,7 +67,6 @@ export async function onRequestPost({ request, env }) {
     .bind(body.pollId, body.optionId, token, voterName)
     .run();
 
-  // Se questo browser stava cambiando un voto già accettato, rimuoviamo il partecipante finché l'admin non rivaluta
   const thisVote = await env.DB.prepare(`SELECT id FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
   if (thisVote) {
     await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(thisVote.id).run();
@@ -102,10 +80,12 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
-  const ip = request.headers.get("CF-Connecting-IP");
-  if (!(await checkRateLimit(env, ip, "vote-delete"))) {
-    return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
-  }
+  // SE HAI CONFIGURATO IL RATE LIMITER NATIVO NEL TOML, USA QUESTO:
+  // const ip = request.headers.get("CF-Connecting-IP");
+  // if (env.RATE_LIMITER) {
+  //   const { success } = await env.RATE_LIMITER.limit({ key: ip || "unknown" });
+  //   if (!success) return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+  // }
 
   const url = new URL(request.url);
   const pollId = url.searchParams.get("pollId");
