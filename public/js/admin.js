@@ -187,7 +187,14 @@ async function loadAdminEvents() {
 }
 
 async function startEdit(id, slug) {
-  const event = await apiGet(`/api/events/${slug}`);
+  // Chiamata alle API admin per avere l'evento completo di voti e partecipanti
+  let event = null;
+  try {
+    event = await apiGet(`/api/admin/events/${id}`);
+  } catch (e) {
+    event = await apiGet(`/api/events/${slug}`);
+  }
+
   editingId = id;
   uploadedImageKey = null;
 
@@ -227,13 +234,17 @@ async function startEdit(id, slug) {
     document.getElementById("poll-question").value = event.poll.question;
     document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
 
-    if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
-      const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no");
-      const noVotes = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() === "no");
-            const nameCounts = {};
-      event.poll.detailedVotes.forEach(v => {
-        const key = v.voter_name.trim().toLowerCase();
-        nameCounts[key] = (nameCounts[key] || 0) + 1;
+    // Mappatura compatibile sia per event.poll.votes che event.poll.detailedVotes
+    const allVotes = event.poll.votes || event.poll.detailedVotes || [];
+
+    if (allVotes.length > 0) {
+      const toReview = allVotes.filter(v => (v.option_label || "").trim().toLowerCase() !== "no");
+      const noVotes = allVotes.filter(v => (v.option_label || "").trim().toLowerCase() === "no");
+      
+      const nameCounts = {};
+      allVotes.forEach(v => {
+        const key = (v.voter_name || "").trim().toLowerCase();
+        if (key) nameCounts[key] = (nameCounts[key] || 0) + 1;
       });
 
       const statusLabel = { pending: "In attesa", accepted: "Accettato ✅", rejected: "Rifiutato ❌" };
@@ -247,14 +258,18 @@ async function startEdit(id, slug) {
       toReview.forEach(v => {
         const row = document.createElement("div");
         row.style.marginBottom = "8px";
+        const voteId = v.id || v.vote_id;
+        
         const acceptBtn = v.status !== "accepted"
-          ? `<button type="button" class="secondary" style="padding:2px 8px; margin-left:10px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'accepted', '${slug}')">Accetta</button>`
+          ? `<button type="button" class="secondary" style="padding:2px 8px; margin-left:10px; font-size:12px;" onclick="setVoteStatus('${voteId}', 'accepted', '${slug}')">Accetta</button>`
           : "";
         const rejectBtn = v.status !== "rejected"
-          ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'rejected', '${slug}')">Rifiuta</button>`
+          ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus('${voteId}', 'rejected', '${slug}')">Rifiuta</button>`
           : "";
-               const isDuplicateName = nameCounts[v.voter_name.trim().toLowerCase()] > 1;
-        const dupBadge = isDuplicateName ? ` <span style="color:#b45309; font-size:11px;">⚠ nome ripetuto, verifica se è la stessa persona</span>` : "";
+          
+        const isDuplicateName = nameCounts[(v.voter_name || "").trim().toLowerCase()] > 1;
+        const dupBadge = isDuplicateName ? ` <span style="color:#b45309; font-size:11px;">⚠ nome ripetuto</span>` : "";
+        
         row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato <i>${escapeHtml(v.option_label)}</i>${dupBadge}
                          — <span>${statusLabel[v.status] || v.status}</span>
                          ${acceptBtn}${rejectBtn}`;
@@ -268,6 +283,9 @@ async function startEdit(id, slug) {
         noBox.innerHTML = `<b>Hanno risposto No:</b> ${noVotes.map(v => escapeHtml(v.voter_name)).join(", ")}`;
         votesContainer.appendChild(noBox);
       }
+    } else {
+      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Richieste di partecipazione</h4>
+                                  <p class="empty-state" style="margin:0 0 10px;">Nessun voto registrato al momento.</p>`;
     }
   } else {
     document.getElementById("poll-toggle").checked = false;
@@ -302,7 +320,7 @@ async function deleteEvent(id) {
 window.setVoteStatus = async function(voteId, status, slug) {
   const messages = {
     accepted: "Confermi di voler accettare questa partecipazione? Il nome verrà aggiunto ai partecipanti.",
-    rejected: "Confermi di voler rifiutare questa partecipazione? Il nome NON verrà aggiunto (o verrà rimosso se già aggiunto).",
+    rejected: "Confermi di voler rifiutare questa partecipazione? Il nome verrà rimosso dai partecipanti.",
   };
   if (messages[status] && !confirm(messages[status])) return;
   try {
@@ -313,7 +331,10 @@ window.setVoteStatus = async function(voteId, status, slug) {
     });
     if (!res.ok) throw new Error(await res.text());
     showToast(status === "accepted" ? "Partecipante aggiunto" : "Richiesta rifiutata");
+    
+    // Ricarica la modale dell'evento per aggiornare sia la lista partecipanti che i voti
     startEdit(editingId, slug);
+    loadAdminEvents();
   } catch (e) {
     showToast("Errore durante l'aggiornamento del voto");
   }
