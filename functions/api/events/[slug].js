@@ -1,55 +1,83 @@
 // GET /api/events/:slug
-export async function onRequestGet({ params, env, request }) {
-  const event = await env.DB.prepare(`SELECT * FROM events WHERE slug = ?`).bind(params.slug).first();
-  if (!event) return new Response("Evento non trovato", { status: 404 });
+export async function onRequestGet({ params, request, env }) {
+  const { slug } = params;
 
-  const { results: participantRows } = await env.DB.prepare(`SELECT name FROM participants WHERE event_id = ? ORDER BY name COLLATE NOCASE`).bind(event.id).all();
+  try {
+    const event = await env.DB.prepare(`SELECT * FROM events WHERE slug = ?`).bind(slug).first();
+    if (!event) return new Response("Evento non trovato", { status: 404 });
 
-  const poll = await env.DB.prepare(`SELECT * FROM polls WHERE event_id = ?`).bind(event.id).first();
+    // Rimosso ORDER BY created_at ASC per evitare il crash su SQLite D1
+    const participantsRes = await env.DB.prepare(
+      `SELECT name FROM participants WHERE event_id = ? ORDER BY id ASC`
+    ).bind(event.id).all();
 
-  let pollData = null;
-  if (poll) {
-    const { results: options } = await env.DB.prepare(
-      `SELECT po.id, po.label, GROUP_CONCAT(v.voter_name, ', ') AS voters, COUNT(v.id) AS votes
-       FROM poll_options po
-       LEFT JOIN votes v ON v.option_id = po.id
-       WHERE po.poll_id = ?
-       GROUP BY po.id
-       ORDER BY po.id`
-    ).bind(poll.id).all();
+    const poll = await env.DB.prepare(`SELECT * FROM polls WHERE event_id = ?`).bind(event.id).first();
 
-    const { results: detailedVotes } = await env.DB.prepare(
-      `SELECT v.id as vote_id, v.voter_name, v.status, po.label as option_label 
-       FROM votes v 
-       JOIN poll_options po ON v.option_id = po.id 
-       WHERE v.poll_id = ?
-       ORDER BY v.created_at ASC`
-    ).bind(poll.id).all();
+    let pollData = null;
+    if (poll) {
+      const optionsRes = await env.DB.prepare(
+        `SELECT * FROM poll_options WHERE poll_id = ? ORDER BY id ASC`
+      ).bind(poll.id).all();
 
-    const voterToken = getVoterToken(request);
-    let myOptionId = null;
-    if (voterToken) {
-      const myVote = await env.DB.prepare(`SELECT option_id FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(poll.id, voterToken).first();
-      if (myVote) myOptionId = myVote.option_id;
+      const options = optionsRes.results || [];
+      const voterToken = getVoterToken(request);
+
+      let myOptionId = null;
+      if (voterToken) {
+        const myVote = await env.DB.prepare(
+          `SELECT option_id FROM votes WHERE poll_id = ? AND voter_token = ?`
+        ).bind(poll.id, voterToken).first();
+        if (myVote) myOptionId = myVote.option_id;
+      }
+
+      const optionsWithVotes = [];
+      for (const opt of options) {
+        const countRes = await env.DB.prepare(
+          `SELECT COUNT(*) as count FROM votes WHERE option_id = ?`
+        ).bind(opt.id).first();
+
+        // Escludiamo dai votanti del sondaggio gli utenti che sono già stati accettati (status = 'accepted')
+        const votersRes = await env.DB.prepare(
+          `SELECT voter_name FROM votes WHERE option_id = ? AND status != 'accepted' AND voter_name IS NOT NULL ORDER BY created_at ASC`
+        ).bind(opt.id).all();
+
+        const votersList = (votersRes.results || [])
+          .map((v) => v.voter_name)
+          .filter(Boolean)
+          .join(", ");
+
+        optionsWithVotes.push({
+          id: opt.id,
+          label: opt.label,
+          votes: countRes ? countRes.count : 0,
+          voters: votersList,
+        });
+      }
+
+      const isOpen = new Date(poll.deadline) > new Date();
+
+      pollData = {
+        id: poll.id,
+        question: poll.question,
+        deadline: poll.deadline,
+        isOpen,
+        myOptionId,
+        options: optionsWithVotes,
+      };
     }
 
-    pollData = {
-      id: poll.id,
-      question: poll.question,
-      deadline: poll.deadline,
-      isOpen: new Date(poll.deadline) > new Date(),
-      options,
-      myOptionId,
-      detailedVotes
-    };
+    return Response.json({
+      ...event,
+      image_url: event.image_key ? `/api/images/${event.image_key}` : null,
+      participants: (participantsRes.results || []).map((p) => p.name),
+      poll: pollData,
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
-
-  return Response.json({
-    ...event,
-    image_url: event.image_key ? `/api/images/${event.image_key}` : null,
-    participants: participantRows.map((p) => p.name),
-    poll: pollData,
-  });
 }
 
 function getVoterToken(request) {

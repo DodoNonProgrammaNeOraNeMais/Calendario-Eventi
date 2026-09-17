@@ -4,56 +4,41 @@
 
 export async function onRequestPatch({ params, request, env }) {
   const voteId = params.id;
-  try {
-    const body = await request.json().catch(() => null);
-    const status = body && body.status;
-    if (!["accepted", "rejected", "pending"].includes(status)) {
-      return Response.json({ error: "Stato non valido" }, { status: 400 });
-    }
+  const body = await request.json().catch(() => null);
 
-    const vote = await env.DB.prepare(
-      `SELECT v.id, v.voter_name, po.label AS option_label, p.event_id
-       FROM votes v
-       JOIN poll_options po ON po.id = v.option_id
-       JOIN polls p ON p.id = v.poll_id
-       WHERE v.id = ?`
-    ).bind(voteId).first();
-
-    if (!vote) return Response.json({ error: "Voto non trovato" }, { status: 404 });
-
-    if (status === "accepted" && vote.option_label.trim().toLowerCase() === "no") {
-      return Response.json({ error: "Non si può accettare un voto 'No'" }, { status: 400 });
-    }
-
-    const statements = [
-      env.DB.prepare(`UPDATE votes SET status = ? WHERE id = ?`).bind(status, voteId),
-    ];
-
-    if (status === "accepted") {
-      // Evita duplicati: non aggiunge se questo voto ha già generato un partecipante,
-      // o se una persona con lo stesso nome è già nella lista (aggiunta a mano o da un altro voto).
-      const alreadyLinked = await env.DB.prepare(`SELECT id FROM participants WHERE vote_id = ?`).bind(voteId).first();
-      const duplicateByName = await env.DB.prepare(
-        `SELECT id FROM participants WHERE event_id = ? AND LOWER(name) = LOWER(?)`
-      ).bind(vote.event_id, vote.voter_name).first();
-
-      if (!alreadyLinked && !duplicateByName) {
-        statements.push(
-          env.DB.prepare(`INSERT INTO participants (event_id, name, vote_id) VALUES (?, ?, ?)`)
-            .bind(vote.event_id, vote.voter_name, voteId)
-        );
-      }
-    } else {
-      // Rifiutato o rimesso in sospeso: rimuove SOLO il partecipante aggiunto in automatico da questo voto,
-      // senza toccare eventuali nomi inseriti a mano dall'admin.
-      statements.push(env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(voteId));
-    }
-
-    await env.DB.batch(statements);
-    return Response.json({ ok: true });
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+  if (!body || !body.status || !["accepted", "rejected"].includes(body.status)) {
+    return new Response("Stato non valido", { status: 400 });
   }
+
+  const vote = await env.DB.prepare(
+    `SELECT v.*, e.id as event_id FROM votes v
+     JOIN polls p ON v.poll_id = p.id
+     JOIN events e ON p.event_id = e.id
+     WHERE v.id = ?`
+  ).bind(voteId).first();
+
+  if (!vote) {
+    return new Response("Voto non trovato", { status: 404 });
+  }
+
+  if (body.status === "accepted") {
+    // Segna il voto come accettato
+    await env.DB.prepare(`UPDATE votes SET status = 'accepted' WHERE id = ?`).bind(voteId).run();
+
+    // Aggiungi ai partecipanti se non presente
+    await env.DB.prepare(
+      `INSERT INTO participants (event_id, name, vote_id) VALUES (?, ?, ?)
+       ON CONFLICT(event_id, vote_id) DO UPDATE SET name = excluded.name`
+    ).bind(vote.event_id, vote.voter_name, voteId).run();
+  } else if (body.status === "rejected") {
+    // Segna come rifiutato
+    await env.DB.prepare(`UPDATE votes SET status = 'rejected' WHERE id = ?`).bind(voteId).run();
+
+    // Rimuovi dalla lista dei partecipanti confermati dell'evento
+    await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(voteId).run();
+  }
+
+  return Response.json({ ok: true });
 }
 
 export async function onRequestDelete({ params, env }) {
