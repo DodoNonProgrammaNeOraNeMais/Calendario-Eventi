@@ -12,6 +12,15 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
   const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c5 3 9 7 9 12a9 9 0 0 1-18 0c0-5 4-9 9-12z"/></svg>';
 
+  // Castagna: guscio marrone scuro con una macchia più chiara (riflesso)
+  // e una piccola "cicatrice" in basso, tipica del seme.
+  const CHESTNUT_SVG =
+    '<svg viewBox="0 0 24 24">' +
+    '<ellipse cx="12" cy="13" rx="9" ry="8.2" fill="#4a2f1c"/>' +
+    '<ellipse cx="9" cy="9.5" rx="3.2" ry="4" fill="#7a5330" opacity=".7"/>' +
+    '<ellipse cx="12" cy="19.5" rx="4.2" ry="1.6" fill="#2c1b10" opacity=".8"/>' +
+    '</svg>';
+
   const LEAF_COLORS = [
     "#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a",
     "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a",
@@ -19,7 +28,9 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     "#e8c158", "#7d8a3a", "#b03a2a", "#6f5a17", "#f0a93a",
   ];
 
-  const LEAF_COUNT = 24;
+  // Più foglie di prima (24 -> 42) e un bel gruppo di castagne (12).
+  const LEAF_COUNT = 42;
+  const CHESTNUT_COUNT = 12;
 
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
@@ -28,93 +39,75 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     layer.className = "leaves-layer";
     document.body.prepend(layer);
 
-    const baseBand = document.createElement("div");
-    baseBand.className = "leaf-carpet-base";
-    layer.appendChild(baseBand);
-
-    // Tappeto: 3 file sfalsate, pieno e colorato. Nessun cumulo.
-    seedBaseCarpet(layer);
-
-    // Foglie che cadono dall'alto: caduta infinita, senza più alimentare
-    // nessun cumulo a terra.
     for (let i = 0; i < LEAF_COUNT; i++) {
-      const leaf = document.createElement("div");
-      leaf.className = "leaf";
+      layer.appendChild(createFallingLeaf(i));
+    }
 
-      const sway = document.createElement("div");
-      sway.className = "leaf-sway";
-      sway.innerHTML = LEAF_SVG;
-      leaf.appendChild(sway);
-
-      const size = 13 + Math.round(Math.random() * 15);
-      const left = Math.random() * 100;
-      const duration = 9 + Math.random() * 15;
-      const delay = -Math.random() * 24;
-      const drift = Math.round((Math.random() - 0.5) * 170) + "px";
-      const rotStart = Math.round(Math.random() * 360);
-      const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (260 + Math.random() * 280);
-      const color = LEAF_COLORS[i % LEAF_COLORS.length];
-      const swayDuration = 2 + Math.random() * 2;
-      const flip = Math.random() > 0.5 ? -1 : 1;
-
-      leaf.style.left = left + "vw";
-      leaf.style.setProperty("--leaf-size", size + "px");
-      leaf.style.color = color;
-      leaf.style.setProperty("--drift", drift);
-      leaf.style.setProperty("--rot-start", rotStart + "deg");
-      leaf.style.setProperty("--rot-end", rotEnd + "deg");
-      leaf.style.setProperty("--flip", flip);
-      leaf.style.animationDuration = duration + "s";
-      leaf.style.animationDelay = delay + "s";
-      sway.style.animationDuration = swayDuration + "s";
-      sway.style.animationDelay = (delay * 0.4) + "s";
-
-      layer.appendChild(leaf);
-      // Nessun listener "animationiteration": la foglia continua solo a
-      // cadere in loop, non genera più nulla a terra.
+    for (let i = 0; i < CHESTNUT_COUNT; i++) {
+      layer.appendChild(createFallingChestnut(i));
     }
   }
 
-  function seedBaseCarpet(layer) {
-    for (let x = 0; x <= 100; x += 1.1) {
-      if (Math.random() < 0.04) continue;
-      addCarpetLeaf(layer, x, 0);
-    }
-    for (let x = 0.5; x <= 100; x += 1.15) {
-      if (Math.random() < 0.06) continue;
-      addCarpetLeaf(layer, x, 1);
-    }
-    for (let x = 0.9; x <= 100; x += 1.3) {
-      if (Math.random() < 0.08) continue;
-      addCarpetLeaf(layer, x, 2);
-    }
+  function createFallingLeaf(i) {
+    const leaf = document.createElement("div");
+    leaf.className = "leaf";
+
+    const sway = document.createElement("div");
+    sway.className = "leaf-sway";
+    sway.innerHTML = LEAF_SVG;
+    leaf.appendChild(sway);
+
+    const size = 13 + Math.round(Math.random() * 15);
+    const left = Math.random() * 100;
+    const duration = 9 + Math.random() * 15;
+    const delay = -Math.random() * 24;
+    const drift = Math.round((Math.random() - 0.5) * 170) + "px";
+    const rotStart = Math.round(Math.random() * 360);
+    const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (260 + Math.random() * 280);
+    const color = LEAF_COLORS[i % LEAF_COLORS.length];
+    const swayDuration = 2 + Math.random() * 2;
+    const flip = Math.random() > 0.5 ? -1 : 1;
+
+    leaf.style.left = left + "vw";
+    leaf.style.setProperty("--leaf-size", size + "px");
+    leaf.style.color = color;
+    leaf.style.setProperty("--drift", drift);
+    leaf.style.setProperty("--rot-start", rotStart + "deg");
+    leaf.style.setProperty("--rot-end", rotEnd + "deg");
+    leaf.style.setProperty("--flip", flip);
+    leaf.style.animationDuration = duration + "s";
+    leaf.style.animationDelay = delay + "s";
+    sway.style.animationDuration = swayDuration + "s";
+    sway.style.animationDelay = (delay * 0.4) + "s";
+
+    return leaf;
   }
 
-  function addCarpetLeaf(layer, x, row) {
-    const left = x + (Math.random() - 0.5) * 0.9;
-    const sizeByRow = [
-      18 + Math.round(Math.random() * 12),
-      14 + Math.round(Math.random() * 9),
-      11 + Math.round(Math.random() * 6),
-    ];
-    const bottomByRow = [
-      Math.random() * 5,
-      3 + Math.random() * 7,
-      7 + Math.random() * 10,
-    ];
-    const size = sizeByRow[row];
-    const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-    const piled = document.createElement("div");
-    piled.className = "leaf-pile leaf-pile--seed leaf-pile--base";
-    piled.innerHTML = LEAF_SVG;
-    piled.style.left = Math.max(0, Math.min(100, left)) + "vw";
-    piled.style.bottom = bottomByRow[row] + "px";
-    piled.style.width = size + "px";
-    piled.style.height = size + "px";
-    piled.style.color = color;
-    piled.style.setProperty("--settle-rot", Math.round(Math.random() * 360) + "deg");
-    piled.style.zIndex = String(row);
-    layer.appendChild(piled);
+  function createFallingChestnut(i) {
+    const nut = document.createElement("div");
+    nut.className = "chestnut";
+    nut.innerHTML = CHESTNUT_SVG;
+
+    // Più pesanti delle foglie: cadono più in fretta, con meno deriva
+    // orizzontale e con una rotazione continua (tumbling), non una
+    // semplice oscillazione.
+    const size = 14 + Math.round(Math.random() * 10);
+    const left = Math.random() * 100;
+    const duration = 5 + Math.random() * 6;
+    const delay = -Math.random() * 20;
+    const drift = Math.round((Math.random() - 0.5) * 70) + "px";
+    const rotStart = Math.round(Math.random() * 360);
+    const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (720 + Math.random() * 360);
+
+    nut.style.left = left + "vw";
+    nut.style.setProperty("--nut-size", size + "px");
+    nut.style.setProperty("--drift", drift);
+    nut.style.setProperty("--rot-start", rotStart + "deg");
+    nut.style.setProperty("--rot-end", rotEnd + "deg");
+    nut.style.animationDuration = duration + "s";
+    nut.style.animationDelay = delay + "s";
+
+    return nut;
   }
 
   if (document.body) injectLeaves();
