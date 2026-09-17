@@ -8,31 +8,9 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   const forced = new URLSearchParams(window.location.search).get("theme") === "foliage";
   if (!isOctober && !forced) return;
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   document.documentElement.classList.add("theme-foliage");
 
   const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c5 3 9 7 9 12a9 9 0 0 1-18 0c0-5 4-9 9-12z"/></svg>';
-
-  const ACORN_SVG =
-    '<svg viewBox="0 0 24 24">' +
-    '<ellipse cx="12" cy="15" rx="6" ry="7" fill="#a9793c"/>' +
-    '<path d="M5 10 Q12 6 19 10 L19 11.5 Q12 8.5 5 11.5 Z" fill="#6b4a24"/>' +
-    '<rect x="11" y="2" width="2" height="4" rx="1" fill="#523a1c"/>' +
-    '</svg>';
-
-  const SAMARA_SVG =
-    '<svg viewBox="0 0 24 40">' +
-    '<ellipse cx="8" cy="32" rx="5" ry="6" fill="#8a6a2a"/>' +
-    '<path d="M8 26 C6 14 10 4 16 2 C14 12 12 20 10 27 Z" fill="#c7a23a" opacity=".85"/>' +
-    '</svg>';
-
-  const BIRD_SVG =
-    '<svg viewBox="0 0 40 16"><path d="M0 8 Q10 -4 20 8 Q30 -4 40 8" stroke="#3a2c22" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
-
-  const BRANCH_SVG =
-    '<svg viewBox="0 0 130 130"><path d="M0 6 Q45 0 70 30 Q90 55 60 45 M40 15 Q55 25 50 45 M20 8 Q30 20 22 34" stroke="#6b4a24" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-    '<circle cx="70" cy="30" r="6" fill="#b5541f"/><circle cx="50" cy="45" r="5" fill="#c98a2c"/><circle cx="22" cy="34" r="4.5" fill="#a83f1e"/></svg>';
 
   const LEAF_COLORS = [
     "#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a",
@@ -42,97 +20,16 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   ];
 
   const LEAF_COUNT = 24;
-  const ACORN_COUNT = 6;
-  const SAMARA_COUNT = 7;
 
-  // ---------- Preferenza utente: se ha disattivato l'effetto in una
-  // visita precedente, lo teniamo in pausa (badge resta comunque per
-  // permettergli di riattivarlo). ----------
-  const STORAGE_KEY = "foliageDisabled";
-  let disabled = localStorage.getItem(STORAGE_KEY) === "1";
-  if (disabled) document.documentElement.classList.add("foliage-paused");
+  function injectLeaves() {
+    if (document.querySelector(".leaves-layer")) return;
 
-  // ---------- Gestione del "vento" generato dal mouse: solo le foglie
-  // normali reagiscono, con una spinta laterale che decresce da sola.
-  // Il ciclo requestAnimationFrame si ferma automaticamente quando la
-  // spinta è tornata a zero: nessun consumo continuo in background. ----------
-  const windState = { mouseXvw: null, active: false };
-  const leafRegistry = [];
-  const WIND_RADIUS_VW = 9;
-  const WIND_MAX_PUSH = 46;
+    const layer = document.createElement("div");
+    layer.className = "leaves-layer";
+    document.body.prepend(layer);
 
-  function windTick() {
-    let anyActive = false;
-    for (const item of leafRegistry) {
-      let target = 0;
-      if (windState.mouseXvw !== null) {
-        const dist = item.leftVw - windState.mouseXvw;
-        const absDist = Math.abs(dist);
-        if (absDist < WIND_RADIUS_VW) {
-          const strength = (WIND_RADIUS_VW - absDist) / WIND_RADIUS_VW;
-          target = Math.sign(dist || 1) * strength * WIND_MAX_PUSH;
-        }
-      }
-      item.wind += (target - item.wind) * 0.12;
-      if (Math.abs(item.wind) > 0.4) anyActive = true;
-      item.el.style.setProperty("--wind", item.wind.toFixed(1) + "px");
-    }
-    if (anyActive) {
-      windState.rafId = requestAnimationFrame(windTick);
-    } else {
-      windState.rafId = null;
-    }
-  }
-
-  function handleMouseMove(e) {
-    windState.mouseXvw = (e.clientX / window.innerWidth) * 100;
-    if (!windState.rafId) windState.rafId = requestAnimationFrame(windTick);
-  }
-
-  // ---------- Sfondo atmosferico: nebbiolina, vignettatura, raggi di
-  // sole, rametti statici agli angoli. Quasi tutto statico o animato
-  // solo in opacità: costo trascurabile anche a lungo termine. ----------
-  function injectBackgroundFx() {
-    const bg = document.createElement("div");
-    bg.className = "foliage-bg-fx";
-
-    const fog = document.createElement("div");
-    fog.className = "foliage-fog";
-    bg.appendChild(fog);
-
-    const vignette = document.createElement("div");
-    vignette.className = "foliage-vignette";
-    bg.appendChild(vignette);
-
-    const rays = document.createElement("div");
-    rays.className = "foliage-rays";
-    bg.appendChild(rays);
-
-    const branchTL = document.createElement("div");
-    branchTL.className = "foliage-branch top-left";
-    branchTL.innerHTML = BRANCH_SVG;
-    bg.appendChild(branchTL);
-
-    const branchTR = document.createElement("div");
-    branchTR.className = "foliage-branch top-right";
-    branchTR.innerHTML = BRANCH_SVG;
-    bg.appendChild(branchTR);
-
-    document.body.prepend(bg);
-  }
-
-  // ---------- Foglie, ghiande, samare che cadono. ----------
-  function injectFallingElements(layer) {
     for (let i = 0; i < LEAF_COUNT; i++) {
-      const leaf = createFallingLeaf(i);
-      layer.appendChild(leaf.el);
-      leafRegistry.push(leaf);
-    }
-    for (let i = 0; i < ACORN_COUNT; i++) {
-      layer.appendChild(createFallingAcorn(i));
-    }
-    for (let i = 0; i < SAMARA_COUNT; i++) {
-      layer.appendChild(createFallingSamara(i));
+      layer.appendChild(createFallingLeaf(i));
     }
   }
 
@@ -160,7 +57,6 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     leaf.style.setProperty("--leaf-size", size + "px");
     leaf.style.color = color;
     leaf.style.setProperty("--drift", drift);
-    leaf.style.setProperty("--wind", "0px");
     leaf.style.setProperty("--rot-start", rotStart + "deg");
     leaf.style.setProperty("--rot-end", rotEnd + "deg");
     leaf.style.setProperty("--flip", flip);
@@ -169,128 +65,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     sway.style.animationDuration = swayDuration + "s";
     sway.style.animationDelay = (delay * 0.4) + "s";
 
-    return { el: leaf, leftVw: left, wind: 0 };
-  }
-
-  function createFallingAcorn(i) {
-    const nut = document.createElement("div");
-    nut.className = "acorn";
-    nut.innerHTML = ACORN_SVG;
-
-    const size = 12 + Math.round(Math.random() * 8);
-    const left = Math.random() * 100;
-    const duration = 6 + Math.random() * 7;
-    const delay = -Math.random() * 22;
-    const drift = Math.round((Math.random() - 0.5) * 60) + "px";
-    const rotStart = Math.round(Math.random() * 360);
-    const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (500 + Math.random() * 300);
-
-    nut.style.left = left + "vw";
-    nut.style.setProperty("--nut-size", size + "px");
-    nut.style.setProperty("--drift", drift);
-    nut.style.setProperty("--rot-start", rotStart + "deg");
-    nut.style.setProperty("--rot-end", rotEnd + "deg");
-    nut.style.animationDuration = duration + "s";
-    nut.style.animationDelay = delay + "s";
-
-    return nut;
-  }
-
-  function createFallingSamara(i) {
-    const sam = document.createElement("div");
-    sam.className = "samara";
-    sam.innerHTML = SAMARA_SVG;
-
-    const scale = 0.85 + Math.random() * 0.5;
-    const left = Math.random() * 100;
-    const duration = 14 + Math.random() * 12;
-    const delay = -Math.random() * 26;
-    const drift = Math.round((Math.random() - 0.5) * 260) + "px";
-    const spins = Math.round((6 + Math.random() * 6)) * 360 * (Math.random() > 0.5 ? 1 : -1);
-
-    sam.style.left = left + "vw";
-    sam.style.setProperty("--sam-w", Math.round(10 * scale) + "px");
-    sam.style.setProperty("--sam-h", Math.round(26 * scale) + "px");
-    sam.style.setProperty("--drift", drift);
-    sam.style.setProperty("--spins", spins + "deg");
-    sam.style.animationDuration = duration + "s";
-    sam.style.animationDelay = delay + "s";
-
-    return sam;
-  }
-
-  // ---------- Uccelli migratori: comparsa rara e non ciclica, un
-  // passaggio ogni 2-4 minuti, si rimuovono da soli a fine volo. ----------
-  function scheduleBird(layer) {
-    const nextIn = 110000 + Math.random() * 130000; // 110-240s
-    setTimeout(() => {
-      if (!document.documentElement.classList.contains("foliage-paused")) {
-        spawnBird(layer);
-      }
-      scheduleBird(layer);
-    }, nextIn);
-  }
-
-  function spawnBird(layer) {
-    const bird = document.createElement("div");
-    bird.className = "bird";
-    const wing = document.createElement("div");
-    wing.className = "bird-wing";
-    wing.innerHTML = BIRD_SVG;
-    bird.appendChild(wing);
-
-    const duration = 18 + Math.random() * 10;
-    const drift = Math.round(4 + Math.random() * 10) + "vh";
-    const flapDuration = 0.5 + Math.random() * 0.3;
-
-    bird.style.top = (4 + Math.random() * 10) + "vh";
-    bird.style.setProperty("--bird-drift", drift);
-    bird.style.animationDuration = duration + "s";
-    wing.style.animationDuration = flapDuration + "s";
-
-    bird.addEventListener("animationend", () => bird.remove());
-    layer.appendChild(bird);
-  }
-
-  // ---------- Badge/toggle in topbar per disattivare tutto l'effetto. ----------
-  function injectToggle() {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "foliage-toggle";
-    btn.textContent = disabled ? "🍂 Tema autunno: off" : "🍂 Tema autunno: on";
-
-    btn.addEventListener("click", () => {
-      disabled = !disabled;
-      localStorage.setItem(STORAGE_KEY, disabled ? "1" : "0");
-      document.documentElement.classList.toggle("foliage-paused", disabled);
-      btn.textContent = disabled ? "🍂 Tema autunno: off" : "🍂 Tema autunno: on";
-    });
-
-    const topbarNav = document.querySelector(".topbar nav");
-    if (topbarNav) {
-      topbarNav.appendChild(btn);
-    } else {
-      btn.classList.add("foliage-toggle-fallback");
-      document.body.appendChild(btn);
-    }
-  }
-
-  function injectLeaves() {
-    if (document.querySelector(".leaves-layer")) return;
-
-    injectBackgroundFx();
-
-    const layer = document.createElement("div");
-    layer.className = "leaves-layer";
-    document.body.prepend(layer);
-
-    injectFallingElements(layer);
-    scheduleBird(layer);
-    injectToggle();
-
-    if (!prefersReducedMotion) {
-      document.addEventListener("mousemove", handleMouseMove, { passive: true });
-    }
+    return leaf;
   }
 
   if (document.body) injectLeaves();
