@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS poll_options (
   label TEXT NOT NULL
 );
 
+-- Contatore per il rate limiting applicativo su /api/votes (vedi functions/api/votes/index.js).
+-- bucket_key e' tipicamente "<azione>:<ip>:<minuto>", es. "vote-post:1.2.3.4:29338521".
+CREATE TABLE IF NOT EXISTS rate_limits (
+  bucket_key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS votes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   poll_id TEXT NOT NULL REFERENCES polls(id),
