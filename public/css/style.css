@@ -702,7 +702,7 @@ html.theme-foliage body::after { display: none !important; }
 .leaf {
   position: absolute;
   top: -8vh;
-  opacity: .85;
+  opacity: .88;
   animation-name: leaf-fall, leaf-sway;
   animation-timing-function: linear, ease-in-out;
   animation-iteration-count: infinite, infinite;
@@ -713,12 +713,13 @@ html.theme-foliage body::after { display: none !important; }
   display: block;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,.12));
+  transform: scaleX(var(--flip, 1));
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.16));
 }
 
 @keyframes leaf-fall {
-  0%   { transform: translateY(0)      translateX(0)                 rotate(var(--rot-start, 0deg)); opacity: .9; }
-  92%  { transform: translateY(108vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: .85; }
+  0%   { transform: translateY(0)      translateX(0)                 rotate(var(--rot-start, 0deg)); opacity: .95; }
+  92%  { transform: translateY(108vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: .88; }
   100% { transform: translateY(112vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: 0; }
 }
 
@@ -727,13 +728,15 @@ html.theme-foliage body::after { display: none !important; }
   50%      { margin-left: 14px; }
 }
 
-/* Cumuli di foglie: si accumulano in basso man mano che le foglie "atterrano" */
+/* Cumuli di foglie: alcuni sono già presenti al caricamento (seminati via JS),
+   altri nascono e crescono nel tempo in punti diversi, come farebbe il vento
+   spingendo le foglie contro angoli e bordi. */
 .leaves-pile {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 60px;
+  height: 90px;
   z-index: -2;
   overflow: hidden;
   pointer-events: none;
@@ -742,20 +745,20 @@ html.theme-foliage body::after { display: none !important; }
 .pile-leaf {
   position: absolute;
   bottom: 0;
-  opacity: .8;
-  animation: pile-settle .6s ease-out forwards;
+  opacity: .85;
+  animation: pile-settle .55s ease-out forwards;
 }
 
 .pile-leaf svg {
   display: block;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.15));
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.18));
 }
 
 @keyframes pile-settle {
-  0%   { transform: translateY(-14px) rotate(0deg); opacity: 0; }
-  100% { transform: translateY(0)     rotate(var(--settle-rot, 0deg)); opacity: .8; }
+  0%   { transform: translateY(-16px) rotate(0deg); opacity: 0; }
+  100% { transform: translateY(0)     rotate(var(--settle-rot, 0deg)); opacity: .85; }
 }
 
 @media (prefers-reduced-motion: reduce) {
