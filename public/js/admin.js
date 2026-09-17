@@ -230,6 +230,11 @@ async function startEdit(id, slug) {
     if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
       const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no");
       const noVotes = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() === "no");
+            const nameCounts = {};
+      event.poll.detailedVotes.forEach(v => {
+        const key = v.voter_name.trim().toLowerCase();
+        nameCounts[key] = (nameCounts[key] || 0) + 1;
+      });
 
       const statusLabel = { pending: "In attesa", accepted: "Accettato ✅", rejected: "Rifiutato ❌" };
 
@@ -248,7 +253,9 @@ async function startEdit(id, slug) {
         const rejectBtn = v.status !== "rejected"
           ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'rejected', '${slug}')">Rifiuta</button>`
           : "";
-        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato <i>${escapeHtml(v.option_label)}</i>
+               const isDuplicateName = nameCounts[v.voter_name.trim().toLowerCase()] > 1;
+        const dupBadge = isDuplicateName ? ` <span style="color:#b45309; font-size:11px;">⚠ nome ripetuto, verifica se è la stessa persona</span>` : "";
+        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato <i>${escapeHtml(v.option_label)}</i>${dupBadge}
                          — <span>${statusLabel[v.status] || v.status}</span>
                          ${acceptBtn}${rejectBtn}`;
         votesContainer.appendChild(row);
