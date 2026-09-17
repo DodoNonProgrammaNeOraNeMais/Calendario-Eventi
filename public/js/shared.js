@@ -11,23 +11,15 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   document.documentElement.classList.add("theme-foliage");
 
   const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c5 3 9 7 9 12a9 9 0 0 1-18 0c0-5 4-9 9-12z"/></svg>';
-  const LEAF_COLORS = ["#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a", "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a"];
 
-  // Foglie in caduta: 24 bastano per l'effetto e costano molto meno di 30+.
-  const LEAF_COUNT = 24;
-
-  // 3 cumuli, spread più stretto = foglie che si sovrappongono e formano
-  // un mucchio leggibile invece di puntini sparsi. startLevel più basso:
-  // il volume iniziale lo dà l'ombra sfumata sotto, non decine di nodi.
-  const PILE_SPOTS = [
-    { center: 6, spread: 5, startLevel: 14 },
-    { center: 52, spread: 6, startLevel: 12 },
-    { center: 90, spread: 5, startLevel: 15 },
+  const LEAF_COLORS = [
+    "#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a",
+    "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a",
+    "#e3b23a", "#d1451f", "#8f6b1e", "#c7742a", "#a5711f",
+    "#e8c158", "#7d8a3a", "#b03a2a", "#6f5a17", "#f0a93a",
   ];
 
-  // Cap molto più basso: un cumulo "grande" si legge già con poche decine
-  // di foglie ben sovrapposte; oltre non aggiunge nulla, solo peso.
-  const MAX_PILE_LEAVES_PER_SPOT = 20;
+  const LEAF_COUNT = 24;
 
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
@@ -36,33 +28,15 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     layer.className = "leaves-layer";
     document.body.prepend(layer);
 
-    // 1) Banda di base sfumata: un solo elemento, un solo paint.
     const baseBand = document.createElement("div");
     baseBand.className = "leaf-carpet-base";
     layer.appendChild(baseBand);
 
-    // 2) Tappeto: due file sfalsate invece di una riga sola, con passo più
-    // largo per limitare il numero di nodi ma senza vuoti percepibili
-    // grazie alla banda sfumata sottostante e alla variazione di dimensione.
+    // Tappeto: 3 file sfalsate, pieno e colorato. Nessun cumulo.
     seedBaseCarpet(layer);
 
-    // 3) I 3 cumuli: ombra di ancoraggio + foglie sovrapposte.
-    PILE_SPOTS.forEach((spot) => {
-      const shadow = document.createElement("div");
-      shadow.className = "leaf-pile-shadow";
-      shadow.style.left = spot.center + "vw";
-      layer.appendChild(shadow);
-
-      for (let n = 0; n < spot.startLevel; n++) {
-        const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
-        const jitteredLeft = spot.center + gauss * spot.spread;
-        const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-        const size = 15 + Math.round(Math.random() * 13);
-        addPileLeaf(layer, jitteredLeft, size, color, spot, true);
-      }
-    });
-
-    // 4) Le foglie che cadono dall'alto, con oscillazione compositor-only.
+    // Foglie che cadono dall'alto: caduta infinita, senza più alimentare
+    // nessun cumulo a terra.
     for (let i = 0; i < LEAF_COUNT; i++) {
       const leaf = document.createElement("div");
       leaf.className = "leaf";
@@ -96,95 +70,51 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
       sway.style.animationDelay = (delay * 0.4) + "s";
 
       layer.appendChild(leaf);
-
-      leaf.addEventListener("animationiteration", () => {
-        landLeaf(layer, left, size, color);
-      });
+      // Nessun listener "animationiteration": la foglia continua solo a
+      // cadere in loop, non genera più nulla a terra.
     }
   }
 
   function seedBaseCarpet(layer) {
-    // Due file sfalsate (passo più largo, ~1.6vw) invece di una riga fitta
-    // ogni 0.9vw: meno nodi totali, ma percepito "pieno" grazie alla banda
-    // sfumata sotto e all'alternanza di quota tra le due file.
-    for (let x = 0; x <= 100; x += 1.6) {
-      if (Math.random() < 0.06) continue;
+    for (let x = 0; x <= 100; x += 1.1) {
+      if (Math.random() < 0.04) continue;
       addCarpetLeaf(layer, x, 0);
     }
-    for (let x = 0.8; x <= 100; x += 1.7) {
-      if (Math.random() < 0.1) continue;
+    for (let x = 0.5; x <= 100; x += 1.15) {
+      if (Math.random() < 0.06) continue;
       addCarpetLeaf(layer, x, 1);
+    }
+    for (let x = 0.9; x <= 100; x += 1.3) {
+      if (Math.random() < 0.08) continue;
+      addCarpetLeaf(layer, x, 2);
     }
   }
 
   function addCarpetLeaf(layer, x, row) {
-    const left = x + (Math.random() - 0.5) * 0.8;
-    const size = row === 0 ? 12 + Math.round(Math.random() * 8) : 9 + Math.round(Math.random() * 6);
+    const left = x + (Math.random() - 0.5) * 0.9;
+    const sizeByRow = [
+      18 + Math.round(Math.random() * 12),
+      14 + Math.round(Math.random() * 9),
+      11 + Math.round(Math.random() * 6),
+    ];
+    const bottomByRow = [
+      Math.random() * 5,
+      3 + Math.random() * 7,
+      7 + Math.random() * 10,
+    ];
+    const size = sizeByRow[row];
     const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
     const piled = document.createElement("div");
     piled.className = "leaf-pile leaf-pile--seed leaf-pile--base";
     piled.innerHTML = LEAF_SVG;
     piled.style.left = Math.max(0, Math.min(100, left)) + "vw";
-    piled.style.bottom = (row === 0 ? Math.random() * 4 : 4 + Math.random() * 8) + "px";
+    piled.style.bottom = bottomByRow[row] + "px";
     piled.style.width = size + "px";
     piled.style.height = size + "px";
     piled.style.color = color;
     piled.style.setProperty("--settle-rot", Math.round(Math.random() * 360) + "deg");
     piled.style.zIndex = String(row);
     layer.appendChild(piled);
-  }
-
-  function pickPileSpot(nearLeft) {
-    let closest = PILE_SPOTS[0];
-    let minDist = Infinity;
-    PILE_SPOTS.forEach((spot) => {
-      const dist = Math.abs(spot.center - nearLeft);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = spot;
-      }
-    });
-    return closest;
-  }
-
-  function landLeaf(layer, leftVw, size, color) {
-    const spot = pickPileSpot(leftVw);
-    const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
-    const jitteredLeft = spot.center + gauss * spot.spread;
-    addPileLeaf(layer, jitteredLeft, size, color, spot, false);
-  }
-
-  function addPileLeaf(layer, leftVw, size, color, spot, isSeed) {
-    // Cap per singolo cumulo (non globale): garantisce che ognuno dei 3
-    // resti sempre pieno e coerente, e mai sovraccaricato di nodi vecchi.
-    if (!spot.leaves) spot.leaves = [];
-    if (spot.leaves.length >= MAX_PILE_LEAVES_PER_SPOT) {
-      const oldest = spot.leaves.shift();
-      oldest.remove();
-    }
-
-    const piled = document.createElement("div");
-    piled.className = "leaf-pile";
-    piled.innerHTML = LEAF_SVG;
-
-    spot.count = (spot.count || 0) + 1;
-    const heightBoost = Math.min(spot.count * 1.6, 46);
-    const pileSize = Math.max(13, size * (0.85 + Math.random() * 0.3));
-    const rot = Math.round(Math.random() * 360);
-    const bottomJitter = heightBoost * (0.8 + Math.random() * 0.35);
-    const clampedLeft = Math.max(0, Math.min(100, leftVw));
-
-    piled.style.left = clampedLeft + "vw";
-    piled.style.bottom = bottomJitter + "px";
-    piled.style.width = pileSize + "px";
-    piled.style.height = pileSize + "px";
-    piled.style.color = color;
-    piled.style.setProperty("--settle-rot", rot + "deg");
-    piled.style.zIndex = String(Math.round(bottomJitter) + 2);
-    if (isSeed) piled.classList.add("leaf-pile--seed");
-
-    layer.appendChild(piled);
-    spot.leaves.push(piled);
   }
 
   if (document.body) injectLeaves();
