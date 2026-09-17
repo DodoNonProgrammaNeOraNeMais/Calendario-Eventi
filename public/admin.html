@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Area amministrazione - Calendario eventi</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Calendario eventi</a>
+    <nav>
+      <button type="button" class="secondary" onclick="location.href='/'">Vedi il calendario pubblico</button>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Crea o modifica un evento</h1>
+    <div id="banner"></div>
+
+    <div class="admin-layout">
+      <div class="card-panel">
+        <form id="event-form">
+          <label for="title">Titolo dell'evento</label>
+          <input type="text" id="title" required placeholder="Es. Festa d'estate">
+
+          <div class="date-row">
+            <div>
+              <label for="start-date">Data inizio</label>
+              <input type="date" id="start-date" required>
+            </div>
+            <div>
+              <label for="end-date">Data fine</label>
+              <input type="date" id="end-date" required>
+            </div>
+          </div>
+          <p class="field-hint">Per un evento di un solo giorno, metti la stessa data in entrambi i campi.</p>
+
+          <label for="description">Descrizione</label>
+          <textarea id="description" rows="4" placeholder="Cosa succede, dove, orari..."></textarea>
+
+          <label>Immagine</label>
+          <div class="image-drop" id="image-drop">Clicca per scegliere un'immagine (opzionale)</div>
+          <input type="file" id="image-input" accept="image/*" style="display:none;">
+          <img id="image-preview" class="image-preview" style="display:none;" alt="Anteprima">
+
+          <label for="participants">Partecipanti</label>
+          <textarea id="participants" rows="4" placeholder="Un nome per riga (opzionale)"></textarea>
+          <p class="field-hint">Un nome per riga: verranno mostrati nella pagina dell'evento.</p>
+
+          <div class="toggle-row">
+            <input type="checkbox" id="poll-toggle">
+            <label for="poll-toggle">Aggiungi un sondaggio</label>
+          </div>
+
+          <div id="poll-fields" style="display:none;">
+            <label for="poll-question">Domanda del sondaggio</label>
+            <input type="text" id="poll-question" placeholder="Es. Vieni alla festa?">
+
+            <label>Opzioni di risposta</label>
+            <p style="margin:0.2rem 0 0.8rem; color:#666;">Fisse per tutti i sondaggi: <b>Sì</b>, <b>No</b>, <b>Forse</b>.</p>
+
+            <label for="poll-deadline">Il sondaggio si chiude il</label>
+            <input type="datetime-local" id="poll-deadline">
+          </div>
+
+          <div class="actions-row">
+            <button type="submit" id="submit-btn">Crea evento</button>
+            <button type="button" id="cancel-edit" class="secondary" style="display:none;">Annulla modifica</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card-panel">
+        <h2>Eventi esistenti</h2>
+        <div id="admin-event-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/shared.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+  <script src="/js/admin.js" defer></script>
+</body>
+</html>

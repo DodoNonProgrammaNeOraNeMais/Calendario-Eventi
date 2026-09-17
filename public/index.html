@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario eventi</title>
+<meta name="description" content="Tutti gli eventi in programma: consulta il calendario, partecipa ai sondaggi e condividi.">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Calendario eventi</a>
+    <nav>
+      <div class="tabs" id="tabs">
+        <button data-view="calendar" class="active">Calendario</button>
+        <button data-view="upcoming">Prossimi eventi</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section id="calendar-view">
+      <div class="calendar-nav">
+        <div class="nav-buttons">
+          <button id="prev-month" aria-label="Mese precedente">&larr;</button>
+          <button id="next-month" aria-label="Mese successivo">&rarr;</button>
+        </div>
+        <h2 id="month-label"></h2>
+        <button id="today-btn" class="secondary">Oggi</button>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </section>
+
+    <section id="upcoming-view" style="display:none;">
+      <h2>Prossimi eventi</h2>
+      <div class="event-list" id="upcoming-list"></div>
+    </section>
+  </main>
+
+  <div id="modal-root"></div>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+  <script src="/js/shared.js"></script>
+  <script src="/js/app.js" defer></script>
+</body>
+</html>
