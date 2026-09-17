@@ -7,24 +7,84 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   const isOctober = new Date().getMonth() === 9; // 0 = gennaio, quindi 9 = ottobre
   const forced = new URLSearchParams(window.location.search).get("theme") === "foliage";
   if (!isOctober && !forced) return;
-
   document.documentElement.classList.add("theme-foliage");
 
-  const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7.5 3 3 7.5 3 13c0 4.4 3.6 8 8 8h1c-.3-1.6-.2-3.2.3-4.7C15.3 11.8 19 9 21 5c-4.5 0-8.7 1.7-11.6 4.6C8.6 8 8.7 5.7 9.6 3.6 10.3 2.9 11.1 2.4 12 2z"/><path d="M12 21c-.2-3 .4-6.4 2-9.5" stroke="currentColor" stroke-width="0.9" fill="none" stroke-linecap="round" opacity="0.55"/></svg>';
+  const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21C6 21 3 16.5 3 12 3 6 7.5 2 12 2s9 4 9 10c0 4.5-3 9-9 9z"/><path d="M12 21V4" stroke="#000" stroke-opacity="0.18" stroke-width="1" fill="none"/><path d="M12 8L8 11M12 12L7.5 14.5M12 16L8.5 18" stroke="#000" stroke-opacity="0.14" stroke-width="0.8" fill="none" stroke-linecap="round"/><path d="M12 8L16 11M12 12L16.5 14.5M12 16L15.5 18" stroke="#000" stroke-opacity="0.14" stroke-width="0.8" fill="none" stroke-linecap="round"/></svg>';
 
+  const LEAF_COLORS = ["#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a", "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a"];
+  const LEAF_COUNT = 28;
 
-  
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
+
     const layer = document.createElement("div");
     layer.className = "leaves-layer";
-    for (let i = 0; i < 10; i++) {
+
+    for (let i = 0; i < LEAF_COUNT; i++) {
       const leaf = document.createElement("div");
       leaf.className = "leaf";
       leaf.innerHTML = LEAF_SVG;
+
+      const size = 12 + Math.round(Math.random() * 14); // 12-26px
+      const left = Math.random() * 100;
+      const duration = 10 + Math.random() * 14; // 10-24s
+      const delay = -Math.random() * 24;
+      const drift = Math.round((Math.random() - 0.5) * 160); // px deriva orizzontale
+      const rotStart = Math.round(Math.random() * 360);
+      const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (270 + Math.random() * 270);
+      const color = LEAF_COLORS[i % LEAF_COLORS.length];
+      const swayDuration = 2 + Math.random() * 2;
+
+      leaf.style.left = left + "vw";
+      leaf.style.width = size + "px";
+      leaf.style.height = size + "px";
+      leaf.style.color = color;
+      leaf.style.setProperty("--drift", drift + "px");
+      leaf.style.setProperty("--rot-start", rotStart + "deg");
+      leaf.style.setProperty("--rot-end", rotEnd + "deg");
+      leaf.style.animationDuration = duration + "s, " + swayDuration + "s";
+      leaf.style.animationDelay = delay + "s, " + (delay * 0.4) + "s";
+
       layer.appendChild(leaf);
+
+      // Quando l'animazione di caduta completa un giro, deposita una
+      // copia della foglia nel cumulo in fondo alla pagina.
+      leaf.addEventListener("animationiteration", () => {
+        spawnPileLeaf(left, size, color);
+      });
     }
+
     document.body.prepend(layer);
+
+    const pile = document.createElement("div");
+    pile.className = "leaves-pile";
+    document.body.appendChild(pile);
+  }
+
+  function spawnPileLeaf(leftVw, size, color) {
+    const pile = document.querySelector(".leaves-pile");
+    if (!pile) return;
+
+    const MAX_PILE = 140; // tetto massimo, oltre il quale ricicla le piu' vecchie
+    if (pile.children.length >= MAX_PILE) {
+      pile.removeChild(pile.firstElementChild);
+    }
+
+    const piled = document.createElement("div");
+    piled.className = "pile-leaf";
+    piled.innerHTML = LEAF_SVG;
+    const jitterLeft = leftVw + (Math.random() - 0.5) * 6;
+    const pileSize = Math.max(10, size * 0.85);
+    const rot = Math.round(Math.random() * 360);
+    const bottomJitter = Math.random() * 10;
+
+    piled.style.left = "calc(" + jitterLeft + "vw)";
+    piled.style.bottom = bottomJitter + "px";
+    piled.style.width = pileSize + "px";
+    piled.style.height = pileSize + "px";
+    piled.style.color = color;
+    piled.style.transform = "rotate(" + rot + "deg)";
+    pile.appendChild(piled);
   }
 
   if (document.body) injectLeaves();
