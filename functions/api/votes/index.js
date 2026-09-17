@@ -20,19 +20,21 @@ async function verifyTurnstile(token, ip, secret) {
 export async function onRequestPost({ request, env }) {
   const ip = request.headers.get("CF-Connecting-IP");
 
- if (env.RATE_LIMITER) {
-  const { success } = await env.RATE_LIMITER.limit({ key: ip || "unknown" });
-  if (!success) return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
-  }
-
   const body = await request.json().catch(() => null);
   if (!body || !body.pollId || !body.optionId) {
     return new Response("Dati mancanti", { status: 400 });
   }
 
-  const turnstileOk = await verifyTurnstile(body.turnstileToken, ip, env.TURNSTILE_SECRET_KEY);
-  if (!turnstileOk) {
-    return new Response("Verifica anti-spam non superata, riprova", { status: 403 });
+  // 1. Recuperiamo subito l'identità dell'utente (cookie) e verifichiamo se ha già votato
+  const { token, isNew } = getOrCreateVoterToken(request);
+  const existingVote = await env.DB.prepare(`SELECT id, voter_name FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
+
+  // 2. Turnstile è obbligatorio SOLO se l'utente non ha un voto preesistente in questo sondaggio
+  if (!existingVote) {
+    const turnstileOk = await verifyTurnstile(body.turnstileToken, ip, env.TURNSTILE_SECRET_KEY);
+    if (!turnstileOk) {
+      return new Response("Verifica anti-spam non superata, riprova", { status: 403 });
+    }
   }
 
   const poll = await env.DB.prepare(`SELECT * FROM polls WHERE id = ?`).bind(body.pollId).first();
@@ -43,10 +45,6 @@ export async function onRequestPost({ request, env }) {
 
   const option = await env.DB.prepare(`SELECT id FROM poll_options WHERE id = ? AND poll_id = ?`).bind(body.optionId, body.pollId).first();
   if (!option) return new Response("Opzione non valida", { status: 400 });
-
-  const { token, isNew } = getOrCreateVoterToken(request);
-
-  const existingVote = await env.DB.prepare(`SELECT voter_name FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
   
   let voterName = body.voterName ? body.voterName.trim() : null;
   if (!voterName && existingVote) {
@@ -67,9 +65,9 @@ export async function onRequestPost({ request, env }) {
     .bind(body.pollId, body.optionId, token, voterName)
     .run();
 
-  const thisVote = await env.DB.prepare(`SELECT id FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
-  if (thisVote) {
-    await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(thisVote.id).run();
+  // Se questo browser stava cambiando un voto già accettato, rimuoviamo il partecipante finché l'admin non lo rivaluta
+  if (existingVote) {
+    await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(existingVote.id).run();
   }
 
   const headers = new Headers({ "Content-Type": "application/json" });
@@ -80,13 +78,6 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
-  // SE HAI CONFIGURATO IL RATE LIMITER NATIVO NEL TOML, USA QUESTO:
-  // const ip = request.headers.get("CF-Connecting-IP");
-  // if (env.RATE_LIMITER) {
-  //   const { success } = await env.RATE_LIMITER.limit({ key: ip || "unknown" });
-  //   if (!success) return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
-  // }
-
   const url = new URL(request.url);
   const pollId = url.searchParams.get("pollId");
   if (!pollId) return new Response("pollId mancante", { status: 400 });
