@@ -167,17 +167,31 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     </div>
   `;
 
-  // Turnstile: rendering esplicito perché il markup viene inserito dinamicamente (SPA).
-  // Vedi https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering
+    // Turnstile: rendering esplicito perché il markup viene inserito dinamicamente (SPA).
+  // Il render viene rimandato al tick successivo: il chiamante (openEventModal/event.js)
+  // aggancia "wrap" al documento SUBITO DOPO che questa funzione ritorna, quindi al momento
+  // del setTimeout il contenitore è già nella pagina (Turnstile ne ha bisogno per calcolare
+  // le dimensioni dell'iframe). Il try/catch impedisce che un problema nel widget anti-spam
+  // blocchi la visualizzazione dell'evento.
   let turnstileWidgetId = null;
   const turnstileContainer = wrap.querySelector(".turnstile-container");
   if (turnstileContainer && window.turnstile) {
-    turnstile.ready(() => {
-      turnstileWidgetId = turnstile.render(turnstileContainer, {
-        sitekey: TURNSTILE_SITE_KEY,
-        theme: "light",
-      });
-    });
+    setTimeout(() => {
+      try {
+        turnstile.ready(() => {
+          try {
+            turnstileWidgetId = turnstile.render(turnstileContainer, {
+              sitekey: TURNSTILE_SITE_KEY,
+              theme: "light",
+            });
+          } catch (e) {
+            console.error("Turnstile render error:", e);
+          }
+        });
+      } catch (e) {
+        console.error("Turnstile ready error:", e);
+      }
+    }, 0);
   }
 
   const coverImg = wrap.querySelector("img.cover");
