@@ -1,4 +1,9 @@
 // Funzioni condivise tra le pagine pubbliche
+
+// Site key pubblica di Cloudflare Turnstile (Dashboard > Turnstile > il tuo widget).
+// E' un valore PUBBLICO, va bene lasciarlo nel codice client-side.
+const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
+
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -133,7 +138,8 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
             ? `<div style="margin-bottom: 1rem;">
                   <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Nome e cognome, per votare:</label>
                  <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
-               </div>`
+               </div>
+               <div class="turnstile-container" style="margin-bottom: 1rem;"></div>`
             : ""
         }
         ${optionsHtml}
@@ -160,6 +166,19 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       </div>
     </div>
   `;
+
+  // Turnstile: rendering esplicito perché il markup viene inserito dinamicamente (SPA).
+  // Vedi https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering
+  let turnstileWidgetId = null;
+  const turnstileContainer = wrap.querySelector(".turnstile-container");
+  if (turnstileContainer && window.turnstile) {
+    turnstile.ready(() => {
+      turnstileWidgetId = turnstile.render(turnstileContainer, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: "light",
+      });
+    });
+  }
 
   const coverImg = wrap.querySelector("img.cover");
   if (coverImg) {
@@ -191,6 +210,15 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         voterName = null; 
       }
 
+      let turnstileToken = null;
+      if (!event.poll.myOptionId) {
+        turnstileToken = turnstileWidgetId !== null ? turnstile.getResponse(turnstileWidgetId) : null;
+        if (!turnstileToken) {
+          showToast("Completa la verifica anti-spam prima di votare");
+          return;
+        }
+      }
+
       btn.disabled = true;
       try {
         const res = await fetch("/api/votes", {
@@ -199,7 +227,8 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           body: JSON.stringify({ 
             pollId: event.poll.id, 
             optionId: Number(btn.dataset.voteOption),
-            voterName: voterName 
+            voterName: voterName,
+            turnstileToken: turnstileToken,
           }),
         });
         if (!res.ok) throw new Error(await res.text());
@@ -207,6 +236,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       } catch (e) {
         showToast("Non e' stato possibile registrare il voto");
         btn.disabled = false;
+        if (turnstileWidgetId !== null) turnstile.reset(turnstileWidgetId);
       }
     });
   });
