@@ -689,9 +689,7 @@ html.theme-foliage {
 }
 
 /* In ottobre le montagne di sfondo lasciano spazio alle foglie che cadono */
-html.theme-foliage body::after {
-  display: none !important;
-}
+html.theme-foliage body::after { display: none !important; }
 
 .leaves-layer {
   position: fixed;
@@ -700,35 +698,69 @@ html.theme-foliage body::after {
   overflow: hidden;
   pointer-events: none;
 }
+
 .leaf {
   position: absolute;
   top: -8vh;
-  width: 20px;
-  height: 20px;
-  opacity: .5;
-  animation: leaf-fall linear infinite;
+  opacity: .85;
+  animation-name: leaf-fall, leaf-sway;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  will-change: transform;
 }
-.leaf svg { display: block; width: 100%; height: 100%; }
+
+.leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.12));
+}
 
 @keyframes leaf-fall {
-  0%   { transform: translateY(0) translateX(0) rotate(0deg); }
-  50%  { transform: translateY(55vh) translateX(24px) rotate(190deg); }
-  100% { transform: translateY(115vh) translateX(-18px) rotate(360deg); }
+  0%   { transform: translateY(0)      translateX(0)                 rotate(var(--rot-start, 0deg)); opacity: .9; }
+  92%  { transform: translateY(108vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: .85; }
+  100% { transform: translateY(112vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: 0; }
 }
 
-.leaf:nth-child(1)  { left: 3%;  width: 16px; height: 16px; color: #c9622a; animation-duration: 16s; animation-delay: -2s; }
-.leaf:nth-child(2)  { left: 12%; width: 22px; height: 22px; color: #a83f1e; animation-duration: 21s; animation-delay: -9s; }
-.leaf:nth-child(3)  { left: 22%; width: 14px; height: 14px; color: #c98a2c; animation-duration: 14s; animation-delay: -5s; }
-.leaf:nth-child(4)  { left: 33%; width: 20px; height: 20px; color: #8a3d15; animation-duration: 19s; animation-delay: -1s; }
-.leaf:nth-child(5)  { left: 45%; width: 17px; height: 17px; color: #d9a13a; animation-duration: 15s; animation-delay: -11s; }
-.leaf:nth-child(6)  { left: 56%; width: 21px; height: 21px; color: #b5541f; animation-duration: 22s; animation-delay: -6s; }
-.leaf:nth-child(7)  { left: 67%; width: 15px; height: 15px; color: #7a6a1f; animation-duration: 17s; animation-delay: -13s; }
-.leaf:nth-child(8)  { left: 77%; width: 19px; height: 19px; color: #a83f1e; animation-duration: 20s; animation-delay: -4s; }
-.leaf:nth-child(9)  { left: 87%; width: 16px; height: 16px; color: #c98a2c; animation-duration: 13s; animation-delay: -8s; }
-.leaf:nth-child(10) { left: 94%; width: 18px; height: 18px; color: #8a3d15; animation-duration: 18s; animation-delay: -15s; }
+@keyframes leaf-sway {
+  0%, 100% { margin-left: 0; }
+  50%      { margin-left: 14px; }
+}
+
+/* Cumuli di foglie: si accumulano in basso man mano che le foglie "atterrano" */
+.leaves-pile {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60px;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pile-leaf {
+  position: absolute;
+  bottom: 0;
+  opacity: .8;
+  animation: pile-settle .6s ease-out forwards;
+}
+
+.pile-leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.15));
+}
+
+@keyframes pile-settle {
+  0%   { transform: translateY(-14px) rotate(0deg); opacity: 0; }
+  100% { transform: translateY(0)     rotate(var(--settle-rot, 0deg)); opacity: .8; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .leaf { animation: none; top: 8%; opacity: .35; }
+  .pile-leaf { animation: none; }
 }
 
 /* Accessibilità */
