@@ -9,27 +9,26 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   if (!isOctober && !forced) return;
   document.documentElement.classList.add("theme-foliage");
 
-  // Foglia con profilo a goccia asimmetrica + nervatura centrale marcata e continua
-  // + venature laterali leggere, per renderla riconoscibile anche a dimensioni piccole.
   const LEAF_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22C7 21 2.5 16.8 3.2 11.2 3.8 6.4 8 2.3 13 2c4 3.5 6 8.6 4.3 13.4C15.9 19.3 12 22 12 22z"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.4" stroke-width="1.1" stroke-linecap="round" d="M12.5 21C11.8 16 12 9.5 13.2 3"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.6 15L9 12.5M12.3 11L8.3 9M12.8 18.5L9.7 16.7"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.9 15.3L16.3 12.5M12.6 11.2L16.2 8.7M13 18.7L15.7 16.5"/></svg>';
 
   const LEAF_COLORS = ["#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a", "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a"];
-  const LEAF_COUNT = 30;
+  const LEAF_COUNT = 34;
 
-  // Cumuli "naturali": punti fissi (angoli, contro i bordi, come farebbe il
-  // vento in un cortile vero) con un livello di partenza diverso l'uno
-  // dall'altro, così alcuni sono già più "vecchi" e grandi fin da subito.
+  // Cumuli iniziali: ognuno con la sua "forma" (spread, altezza massima e
+  // skew diversi), non tutti la stessa campana simmetrica. skew sposta il
+  // centro di densità della gaussiana verso un lato, dando un profilo
+  // asimmetrico invece che sempre simmetrico.
   const PILE_SPOTS = [
-    { center: 4,  spread: 5,  startLevel: 3 },
-    { center: 18, spread: 7,  startLevel: 5 },
-    { center: 34, spread: 6,  startLevel: 2 },
-    { center: 50, spread: 8,  startLevel: 6 },
-    { center: 66, spread: 6,  startLevel: 2 },
-    { center: 82, spread: 7,  startLevel: 4 },
-    { center: 96, spread: 5,  startLevel: 3 },
+    { center: 2,  spread: 9,  startLevel: 26, maxHeight: 58, skew: 0.3   },
+    { center: 11, spread: 4,  startLevel: 9,  maxHeight: 40, skew: -0.4  },
+    { center: 30, spread: 5,  startLevel: 6,  maxHeight: 34, skew: 0     },
+    { center: 60, spread: 6,  startLevel: 20, maxHeight: 70, skew: -0.2  },
+    { center: 88, spread: 10, startLevel: 30, maxHeight: 55, skew: -0.35 },
+    { center: 96, spread: 3,  startLevel: 8,  maxHeight: 45, skew: 0.2   },
   ];
-  const MAX_PILE_LEAVES = 220;
-  const NEW_PILE_CHANCE = 0.05; // probabilità che nasca un cumulo spontaneo altrove
+
+  const MAX_PILE_LEAVES = 900; // tetto molto più alto: i cumuli crescono a lungo
+  const NEW_PILE_CHANCE = 0.09; // più alta: nascono nuovi cumuli più spesso
 
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
@@ -42,9 +41,9 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
       leaf.className = "leaf";
       leaf.innerHTML = LEAF_SVG;
 
-      const size = 13 + Math.round(Math.random() * 15); // 13-28px
+      const size = 13 + Math.round(Math.random() * 15);
       const left = Math.random() * 100;
-      const duration = 9 + Math.random() * 15; // 9-24s
+      const duration = 9 + Math.random() * 15;
       const delay = -Math.random() * 24;
       const drift = Math.round((Math.random() - 0.5) * 170);
       const rotStart = Math.round(Math.random() * 360);
@@ -77,31 +76,47 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     pile.className = "leaves-pile";
     document.body.appendChild(pile);
 
-    // Semina i cumuli iniziali: la pagina non parte "vuota", ma con mucchi
-    // già formati come se le foglie cadessero da un po'.
+    // Semina subito i cumuli iniziali, grandi e con forme diverse fin da
+    // subito: la pagina non parte vuota.
     PILE_SPOTS.forEach((spot) => {
       for (let n = 0; n < spot.startLevel; n++) {
-        const jitteredLeft = spot.center + (Math.random() - 0.5) * spot.spread;
+        const jitteredLeft = spot.center + gaussianOffset(spot);
         const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-        const size = 12 + Math.round(Math.random() * 12);
+        const size = 13 + Math.round(Math.random() * 13);
         addPileLeaf(jitteredLeft, size, color, spot, true);
       }
     });
   }
 
+  function gaussianOffset(spot) {
+    // Somma di 3 numeri casuali per una distribuzione a campana, con skew
+    // per spostare il centro di densità verso un lato: così ogni cumulo
+    // ha un profilo diverso invece di essere sempre simmetrico.
+    const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+    return (gauss + (spot.skew || 0)) * spot.spread;
+  }
+
   function pickPileSpot(nearLeft) {
-    // Sceglie il cumulo esistente più vicino al punto in cui la foglia atterra,
-    // ma solo se e' "abbastanza vicino"; altrimenti può nascerne uno nuovo lì.
     let closest = null;
     let minDist = Infinity;
     PILE_SPOTS.forEach((spot) => {
       const dist = Math.abs(spot.center - nearLeft);
       if (dist < minDist) { minDist = dist; closest = spot; }
     });
-    if (closest && minDist < 9) return closest;
 
-    if (Math.random() < NEW_PILE_CHANCE && PILE_SPOTS.length < 14) {
-      const spot = { center: nearLeft, spread: 5 + Math.random() * 4, startLevel: 0 };
+    // Priorità ad alimentare un cumulo esistente se la foglia cade
+    // abbastanza vicino; altrimenti, con probabilità più alta rispetto
+    // a prima, ne nasce uno completamente nuovo proprio lì.
+    if (closest && minDist < 8) return closest;
+
+    if (Math.random() < NEW_PILE_CHANCE) {
+      const spot = {
+        center: nearLeft,
+        spread: 3 + Math.random() * 6,
+        startLevel: 0,
+        maxHeight: 30 + Math.random() * 40,
+        skew: (Math.random() - 0.5) * 0.8,
+      };
       PILE_SPOTS.push(spot);
       return spot;
     }
@@ -111,7 +126,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   function landLeaf(leftVw, size, color) {
     const spot = pickPileSpot(leftVw);
     if (!spot) return;
-    const jitteredLeft = spot.center + (Math.random() - 0.5) * spot.spread;
+    const jitteredLeft = spot.center + gaussianOffset(spot);
     addPileLeaf(jitteredLeft, size, color, spot, false);
   }
 
@@ -128,22 +143,24 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     piled.innerHTML = LEAF_SVG;
 
     spot.count = (spot.count || 0) + 1;
-    // Più foglie si accumulano in un punto, più il cumulo "cresce" in altezza:
-    // così i mucchi più vecchi diventano visibilmente più grandi di quelli
-    // appena nati, come in natura.
-    const heightBoost = Math.min(spot.count * 0.9, 34);
-    const pileSize = Math.max(10, size * (0.8 + Math.random() * 0.3));
+    const cap = spot.maxHeight || 55;
+    // Crescita logaritmica verso il tetto proprio del cumulo (maxHeight):
+    // veloce all'inizio, rallenta avvicinandosi al limite personale, così
+    // ogni cumulo mantiene la propria "taglia" anche dopo centinaia di foglie.
+    const heightBoost = cap * (1 - 1 / (1 + spot.count * 0.12));
+    const pileSize = Math.max(11, size * (0.85 + Math.random() * 0.35));
     const rot = Math.round(Math.random() * 360);
-    const bottomJitter = heightBoost + Math.random() * 8;
+    const bottomJitter = heightBoost * (0.7 + Math.random() * 0.5);
+    const clampedLeft = Math.max(0, Math.min(100, leftVw));
 
-    piled.style.left = "calc(" + leftVw + "vw)";
+    piled.style.left = clampedLeft + "vw";
     piled.style.bottom = bottomJitter + "px";
     piled.style.width = pileSize + "px";
     piled.style.height = pileSize + "px";
     piled.style.color = color;
     piled.style.setProperty("--settle-rot", rot + "deg");
     piled.style.zIndex = String(Math.round(bottomJitter));
-    if (isSeed) piled.style.animation = "none";
+    if (isSeed) piled.classList.add("pile-leaf--seed");
 
     pile.appendChild(piled);
   }
