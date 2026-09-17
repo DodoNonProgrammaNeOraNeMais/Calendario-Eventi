@@ -11,24 +11,28 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
   const LEAF_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22C7 21 2.5 16.8 3.2 11.2 3.8 6.4 8 2.3 13 2c4 3.5 6 8.6 4.3 13.4C15.9 19.3 12 22 12 22z"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.4" stroke-width="1.1" stroke-linecap="round" d="M12.5 21C11.8 16 12 9.5 13.2 3"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.6 15L9 12.5M12.3 11L8.3 9M12.8 18.5L9.7 16.7"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.9 15.3L16.3 12.5M12.6 11.2L16.2 8.7M13 18.7L15.7 16.5"/></svg>';
 
+  const CHESTNUT_SVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><ellipse cx="10" cy="11" rx="7.5" ry="7" fill="#5a3a22"/><path fill="#7a5535" d="M4 9C5 6 8 3.5 10 3.5c2 0 5 2.5 6 5.5-1.5-1-3.6-1.6-6-1.6S5.5 8 4 9z"/><ellipse cx="9.3" cy="9.5" rx="2.6" ry="2.1" fill="#c9a876" opacity="0.85"/></svg>';
+
+  const TREE_SVG = '<svg viewBox="0 0 100 220" aria-hidden="true"><g><ellipse cx="50" cy="55" rx="42" ry="36" fill="#5c7048"/><ellipse cx="28" cy="62" rx="30" ry="26" fill="#4f6a3c"/><ellipse cx="72" cy="60" rx="28" ry="24" fill="#4f6a3c"/><ellipse cx="50" cy="30" rx="34" ry="29" fill="#6d7f52"/><ellipse cx="35" cy="40" rx="26" ry="22" fill="#5c7048"/><ellipse cx="65" cy="42" rx="26" ry="22" fill="#5c7048"/><ellipse cx="50" cy="75" rx="26" ry="22" fill="#455e34"/></g><path fill="#5c4530" d="M42 96C41 130 40 165 38 208L48 208C48 165 49 130 52 96Z"/><path fill="#4a3624" d="M52 96C53 130 54 165 58 208L64 208C61 165 60 130 58 96Z"/><path fill="none" stroke="#2f2115" stroke-width="1" stroke-opacity="0.35" stroke-linecap="round" d="M44 120L43 200M50 115L51 200M58 125L60 200"/></svg>';
+
   const LEAF_COLORS = ["#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a", "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a"];
-  const LEAF_COUNT = 34;
+  const LEAF_COUNT = 30;
 
-  // Cumuli iniziali: ognuno con la sua "forma" (spread, altezza massima e
-  // skew diversi), non tutti la stessa campana simmetrica. skew sposta il
-  // centro di densità della gaussiana verso un lato, dando un profilo
-  // asimmetrico invece che sempre simmetrico.
   const PILE_SPOTS = [
-    { center: 2,  spread: 9,  startLevel: 26, maxHeight: 58, skew: 0.3   },
-    { center: 11, spread: 4,  startLevel: 9,  maxHeight: 40, skew: -0.4  },
-    { center: 30, spread: 5,  startLevel: 6,  maxHeight: 34, skew: 0     },
-    { center: 60, spread: 6,  startLevel: 20, maxHeight: 70, skew: -0.2  },
-    { center: 88, spread: 10, startLevel: 30, maxHeight: 55, skew: -0.35 },
-    { center: 96, spread: 3,  startLevel: 8,  maxHeight: 45, skew: 0.2   },
+    { center: 2,  spread: 6, startLevel: 14 },
+    { center: 9,  spread: 4, startLevel: 6  },
+    { center: 29, spread: 5, startLevel: 2  },
+    { center: 61, spread: 7, startLevel: 9  },
+    { center: 88, spread: 6, startLevel: 16 },
+    { center: 94, spread: 3, startLevel: 4  },
   ];
+  const MAX_PILE_LEAVES = 260;
+  const NEW_PILE_CHANCE = 0.035;
 
-  const MAX_PILE_LEAVES = 900; // tetto molto più alto: i cumuli crescono a lungo
-  const NEW_PILE_CHANCE = 0.09; // più alta: nascono nuovi cumuli più spesso
+  const TREES = [
+    { side: "left",  leftVw: -2,  heightVh: 34 },
+    { side: "right", leftVw: 98,  heightVh: 48 },
+  ];
 
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
@@ -72,28 +76,56 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
     document.body.prepend(layer);
 
+    const treesLayer = document.createElement("div");
+    treesLayer.className = "trees-layer";
+    TREES.forEach((tree) => {
+      const el = document.createElement("div");
+      el.className = "chestnut-tree chestnut-tree--" + tree.side;
+      el.innerHTML = TREE_SVG;
+      el.style.left = tree.leftVw + "vw";
+      el.style.height = tree.heightVh + "vh";
+      treesLayer.appendChild(el);
+      tree.el = el;
+    });
+    document.body.prepend(treesLayer);
+
     const pile = document.createElement("div");
     pile.className = "leaves-pile";
     document.body.appendChild(pile);
 
-    // Semina subito i cumuli iniziali, grandi e con forme diverse fin da
-    // subito: la pagina non parte vuota.
+    seedBaseCarpet(pile);
+
     PILE_SPOTS.forEach((spot) => {
       for (let n = 0; n < spot.startLevel; n++) {
-        const jitteredLeft = spot.center + gaussianOffset(spot);
+        const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+        const jitteredLeft = spot.center + gauss * spot.spread;
         const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
         const size = 13 + Math.round(Math.random() * 13);
         addPileLeaf(jitteredLeft, size, color, spot, true);
       }
     });
+
+    TREES.forEach((tree) => scheduleChestnut(tree));
   }
 
-  function gaussianOffset(spot) {
-    // Somma di 3 numeri casuali per una distribuzione a campana, con skew
-    // per spostare il centro di densità verso un lato: così ogni cumulo
-    // ha un profilo diverso invece di essere sempre simmetrico.
-    const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
-    return (gauss + (spot.skew || 0)) * spot.spread;
+  function seedBaseCarpet(pile) {
+    for (let x = 0; x <= 100; x += 1.6) {
+      if (Math.random() < 0.22) continue;
+      const left = x + (Math.random() - 0.5) * 1.2;
+      const size = 11 + Math.round(Math.random() * 9);
+      const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
+      const piled = document.createElement("div");
+      piled.className = "pile-leaf pile-leaf--seed pile-leaf--base";
+      piled.innerHTML = LEAF_SVG;
+      piled.style.left = Math.max(0, Math.min(100, left)) + "vw";
+      piled.style.bottom = Math.random() * 4 + "px";
+      piled.style.width = size + "px";
+      piled.style.height = size + "px";
+      piled.style.color = color;
+      piled.style.setProperty("--settle-rot", Math.round(Math.random() * 360) + "deg");
+      piled.style.zIndex = "1";
+      pile.appendChild(piled);
+    }
   }
 
   function pickPileSpot(nearLeft) {
@@ -103,20 +135,10 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
       const dist = Math.abs(spot.center - nearLeft);
       if (dist < minDist) { minDist = dist; closest = spot; }
     });
-
-    // Priorità ad alimentare un cumulo esistente se la foglia cade
-    // abbastanza vicino; altrimenti, con probabilità più alta rispetto
-    // a prima, ne nasce uno completamente nuovo proprio lì.
     if (closest && minDist < 8) return closest;
 
-    if (Math.random() < NEW_PILE_CHANCE) {
-      const spot = {
-        center: nearLeft,
-        spread: 3 + Math.random() * 6,
-        startLevel: 0,
-        maxHeight: 30 + Math.random() * 40,
-        skew: (Math.random() - 0.5) * 0.8,
-      };
+    if (Math.random() < NEW_PILE_CHANCE && PILE_SPOTS.length < 12) {
+      const spot = { center: nearLeft, spread: 4 + Math.random() * 3, startLevel: 0 };
       PILE_SPOTS.push(spot);
       return spot;
     }
@@ -126,7 +148,8 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   function landLeaf(leftVw, size, color) {
     const spot = pickPileSpot(leftVw);
     if (!spot) return;
-    const jitteredLeft = spot.center + gaussianOffset(spot);
+    const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+    const jitteredLeft = spot.center + gauss * spot.spread;
     addPileLeaf(jitteredLeft, size, color, spot, false);
   }
 
@@ -134,8 +157,9 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     const pile = document.querySelector(".leaves-pile");
     if (!pile) return;
 
-    if (pile.children.length >= MAX_PILE_LEAVES) {
-      pile.removeChild(pile.firstElementChild);
+    const realLeaves = pile.querySelectorAll(".pile-leaf:not(.pile-leaf--base)");
+    if (realLeaves.length >= MAX_PILE_LEAVES) {
+      realLeaves[0].remove();
     }
 
     const piled = document.createElement("div");
@@ -143,14 +167,10 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     piled.innerHTML = LEAF_SVG;
 
     spot.count = (spot.count || 0) + 1;
-    const cap = spot.maxHeight || 55;
-    // Crescita logaritmica verso il tetto proprio del cumulo (maxHeight):
-    // veloce all'inizio, rallenta avvicinandosi al limite personale, così
-    // ogni cumulo mantiene la propria "taglia" anche dopo centinaia di foglie.
-    const heightBoost = cap * (1 - 1 / (1 + spot.count * 0.12));
+    const heightBoost = Math.min(spot.count * 1.35, 62);
     const pileSize = Math.max(11, size * (0.85 + Math.random() * 0.35));
     const rot = Math.round(Math.random() * 360);
-    const bottomJitter = heightBoost * (0.7 + Math.random() * 0.5);
+    const bottomJitter = heightBoost * (0.75 + Math.random() * 0.5);
     const clampedLeft = Math.max(0, Math.min(100, leftVw));
 
     piled.style.left = clampedLeft + "vw";
@@ -159,10 +179,70 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     piled.style.height = pileSize + "px";
     piled.style.color = color;
     piled.style.setProperty("--settle-rot", rot + "deg");
-    piled.style.zIndex = String(Math.round(bottomJitter));
+    piled.style.zIndex = String(Math.round(bottomJitter) + 2);
     if (isSeed) piled.classList.add("pile-leaf--seed");
 
     pile.appendChild(piled);
+  }
+
+  function scheduleChestnut(tree) {
+    const wait = 3000 + Math.random() * 6000;
+    setTimeout(() => {
+      dropChestnut(tree);
+      scheduleChestnut(tree);
+    }, wait);
+  }
+
+  function dropChestnut(tree) {
+    const el = tree.el;
+    if (!el) return;
+
+    const chestnut = document.createElement("div");
+    chestnut.className = "chestnut";
+    chestnut.innerHTML = CHESTNUT_SVG;
+
+    const spreadVw = tree.heightVh * 0.28;
+    const startLeft = tree.side === "left"
+      ? tree.leftVw + spreadVw * 0.5 + Math.random() * spreadVw
+      : tree.leftVw - spreadVw * 1.5 + Math.random() * spreadVw;
+    const size = 14 + Math.round(Math.random() * 8);
+    const duration = 1.6 + Math.random() * 1.1;
+    const drift = Math.round((Math.random() - 0.5) * 60);
+    const rot = Math.round((Math.random() - 0.5) * 500);
+
+    chestnut.style.left = Math.max(0, Math.min(100, startLeft)) + "vw";
+    chestnut.style.width = size + "px";
+    chestnut.style.height = size + "px";
+    chestnut.style.setProperty("--drift", drift + "px");
+    chestnut.style.setProperty("--rot", rot + "deg");
+    chestnut.style.animationDuration = duration + "s";
+
+    document.body.appendChild(chestnut);
+
+    chestnut.addEventListener("animationend", () => {
+      const buriesInLeaves = Math.random() < 0.6;
+      if (buriesInLeaves) {
+        chestnut.classList.add("chestnut--sinking");
+        setTimeout(() => chestnut.remove(), 500);
+      } else {
+        const pile = document.querySelector(".leaves-pile");
+        if (pile) {
+          const resting = document.createElement("div");
+          resting.className = "pile-chestnut";
+          resting.innerHTML = CHESTNUT_SVG;
+          resting.style.left = chestnut.style.left;
+          resting.style.width = size + "px";
+          resting.style.height = size + "px";
+          resting.style.bottom = (Math.random() * 10) + "px";
+          resting.style.transform = "rotate(" + Math.round(Math.random() * 360) + "deg)";
+          pile.appendChild(resting);
+
+          const restingLeaves = pile.querySelectorAll(".pile-chestnut");
+          if (restingLeaves.length > 40) restingLeaves[0].remove();
+        }
+        chestnut.remove();
+      }
+    });
   }
 
   if (document.body) injectLeaves();
