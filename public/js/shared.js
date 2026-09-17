@@ -28,8 +28,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     "#e8c158", "#7d8a3a", "#b03a2a", "#6f5a17", "#f0a93a",
   ];
 
-  // Più foglie di prima (24 -> 42) e un bel gruppo di castagne (12).
-  const LEAF_COUNT = 42;
+  const LEAF_COUNT = 24;
   const CHESTNUT_COUNT = 12;
 
   function injectLeaves() {
