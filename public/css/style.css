@@ -660,6 +660,77 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
   .event-card img { width: 100%; height: 150px; }
 }
 
+/* ============================================================
+   TEMA STAGIONALE "FOLIAGE" (attivo automaticamente in ottobre)
+   ============================================================== */
+
+html.theme-foliage {
+  --pine: #b5541f;
+  --pine-dark: #8a3d15;
+  --pine-soft: #f6e2ce;
+  --wood: #c98a2c;
+  --wood-dark: #96631c;
+  --success: #7a6a1f;
+  --success-soft: #eee7cf;
+  --danger: #a83232;
+  --danger-dark: #7f2424;
+  --danger-soft: #f3d9d3;
+  --bg: #f6ede1;
+  --card: #fdf6ec;
+  --card-strong: #fffaf1;
+  --stone: #e8d9c3;
+  --stone-light: #f2e6d4;
+  --sand: #e3c9a0;
+  --border: #e0cbab;
+  --ink: #3a2c22;
+  --ink-soft: #7a6555;
+  --rock: #a8926f;
+  --slate: #6b5847;
+}
+
+/* In ottobre le montagne di sfondo lasciano spazio alle foglie che cadono */
+html.theme-foliage body::after {
+  display: none !important;
+}
+
+.leaves-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.leaf {
+  position: absolute;
+  top: -8vh;
+  width: 20px;
+  height: 20px;
+  opacity: .5;
+  animation: leaf-fall linear infinite;
+}
+.leaf svg { display: block; width: 100%; height: 100%; }
+
+@keyframes leaf-fall {
+  0%   { transform: translateY(0) translateX(0) rotate(0deg); }
+  50%  { transform: translateY(55vh) translateX(24px) rotate(190deg); }
+  100% { transform: translateY(115vh) translateX(-18px) rotate(360deg); }
+}
+
+.leaf:nth-child(1)  { left: 3%;  width: 16px; height: 16px; color: #c9622a; animation-duration: 16s; animation-delay: -2s; }
+.leaf:nth-child(2)  { left: 12%; width: 22px; height: 22px; color: #a83f1e; animation-duration: 21s; animation-delay: -9s; }
+.leaf:nth-child(3)  { left: 22%; width: 14px; height: 14px; color: #c98a2c; animation-duration: 14s; animation-delay: -5s; }
+.leaf:nth-child(4)  { left: 33%; width: 20px; height: 20px; color: #8a3d15; animation-duration: 19s; animation-delay: -1s; }
+.leaf:nth-child(5)  { left: 45%; width: 17px; height: 17px; color: #d9a13a; animation-duration: 15s; animation-delay: -11s; }
+.leaf:nth-child(6)  { left: 56%; width: 21px; height: 21px; color: #b5541f; animation-duration: 22s; animation-delay: -6s; }
+.leaf:nth-child(7)  { left: 67%; width: 15px; height: 15px; color: #7a6a1f; animation-duration: 17s; animation-delay: -13s; }
+.leaf:nth-child(8)  { left: 77%; width: 19px; height: 19px; color: #a83f1e; animation-duration: 20s; animation-delay: -4s; }
+.leaf:nth-child(9)  { left: 87%; width: 16px; height: 16px; color: #c98a2c; animation-duration: 13s; animation-delay: -8s; }
+.leaf:nth-child(10) { left: 94%; width: 18px; height: 18px; color: #8a3d15; animation-duration: 18s; animation-delay: -15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf { animation: none; top: 8%; opacity: .35; }
+}
+
 /* Accessibilità */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

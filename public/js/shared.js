@@ -1,5 +1,36 @@
 const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
+// Tema stagionale "foliage": si attiva da solo durante tutto il mese di ottobre,
+// niente da configurare, sparisce automaticamente a novembre.
+// Per testarlo in anticipo basta aggiungere ?theme=foliage all'URL.
+(function applySeasonalFoliageTheme() {
+  const isOctober = new Date().getMonth() === 9; // 0 = gennaio, quindi 9 = ottobre
+  const forced = new URLSearchParams(window.location.search).get("theme") === "foliage";
+  if (!isOctober && !forced) return;
+
+  document.documentElement.classList.add("theme-foliage");
+
+  const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+    '<path d="M12 2C7 6 3 10 3 15a5 5 0 0 0 5 5c1.6 0 3-.6 4-1.6C13 20.4 14.4 21 16 21a5 5 0 0 0 5-5c0-5-4-9-9-14z"/>' +
+    '</svg>';
+
+  function injectLeaves() {
+    if (document.querySelector(".leaves-layer")) return;
+    const layer = document.createElement("div");
+    layer.className = "leaves-layer";
+    for (let i = 0; i < 10; i++) {
+      const leaf = document.createElement("div");
+      leaf.className = "leaf";
+      leaf.innerHTML = LEAF_SVG;
+      layer.appendChild(leaf);
+    }
+    document.body.prepend(layer);
+  }
+
+  if (document.body) injectLeaves();
+  else document.addEventListener("DOMContentLoaded", injectLeaves);
+})();
+
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
