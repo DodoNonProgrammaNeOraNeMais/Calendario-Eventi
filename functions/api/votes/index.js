@@ -24,28 +24,27 @@ export async function onRequestPost({ request, env }) {
   if (!voterName && existingVote) {
     voterName = existingVote.voter_name;
   }
-  if (!voterName) {
+    if (!voterName) {
     return new Response("Il nome è obbligatorio per votare", { status: 400 });
   }
+  if (!/\S+\s+\S+/.test(voterName)) {
+    return new Response("Inserisci sia il nome che il cognome (es. Mario Rossi)", { status: 400 });
+  }
 
-  // Verifica se esiste già un voto per questo sondaggio con lo stesso nome (case-insensitive)
-  const existingByName = await env.DB.prepare(
-    `SELECT * FROM votes WHERE poll_id = ? AND LOWER(voter_name) = LOWER(?)`
-  ).bind(body.pollId, voterName).first();
+  // L'identità del voto è determinata SOLO dal cookie del browser (voter_token), mai dal nome scritto:
+  // il nome è solo un'etichetta, non una prova di identità, quindi non deve mai permettere di sovrascrivere il voto di qualcun altro.
+  await env.DB.prepare(
+    `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
+     ON CONFLICT(poll_id, voter_token)
+     DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now'), status = 'pending'`
+  )
+    .bind(body.pollId, body.optionId, token, voterName)
+    .run();
 
-  if (existingByName) {
-    // Aggiorna il voto esistente (aggiornando anche il token così il browser viene ri-associato)
-    await env.DB.prepare(
-      `UPDATE votes SET option_id = ?, voter_name = ?, voter_token = ?, created_at = datetime('now') WHERE id = ?`
-    ).bind(body.optionId, voterName, token, existingByName.id).run();
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO votes (poll_id, option_id, voter_token, voter_name) VALUES (?, ?, ?, ?)
-       ON CONFLICT(poll_id, voter_token)
-       DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now')`
-    )
-      .bind(body.pollId, body.optionId, token, voterName)
-      .run();
+  // Se questo browser stava cambiando un voto già accettato, rimuoviamo il partecipante finché l'admin non rivaluta
+  const thisVote = await env.DB.prepare(`SELECT id FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(body.pollId, token).first();
+  if (thisVote) {
+    await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(thisVote.id).run();
   }
 
   const headers = new Headers({ "Content-Type": "application/json" });
@@ -68,7 +67,11 @@ export async function onRequestDelete({ request, env }) {
     return new Response("Il sondaggio e' scaduto", { status: 403 });
   }
 
-  await env.DB.prepare(`DELETE FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(pollId, token).run();
+  const existing = await env.DB.prepare(`SELECT id FROM votes WHERE poll_id = ? AND voter_token = ?`).bind(pollId, token).first();
+  if (existing) {
+    await env.DB.prepare(`DELETE FROM participants WHERE vote_id = ?`).bind(existing.id).run();
+    await env.DB.prepare(`DELETE FROM votes WHERE id = ?`).bind(existing.id).run();
+  }
   return Response.json({ ok: true });
 }
 

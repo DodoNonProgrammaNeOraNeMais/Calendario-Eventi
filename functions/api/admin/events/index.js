@@ -1,3 +1,5 @@
+const POLL_OPTIONS = ["Sì", "No", "Forse"]; // opzioni standard per tutti i sondaggi
+
 export async function onRequestPost({ request, env }) {
   try {
     const body = await request.json().catch(() => null);
@@ -32,10 +34,10 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    const options = poll && Array.isArray(poll.options) ? poll.options.map((o) => o.trim()).filter(Boolean) : [];
-    const wantsPoll = poll && poll.question && poll.deadline && options.length >= 2;
+    const wantsPoll = poll && poll.question && poll.deadline;
 
     if (wantsPoll) {
+      const options = POLL_OPTIONS; // opzioni standard, non modificabili
       const pollId = crypto.randomUUID();
       await env.DB.prepare(
         `INSERT INTO polls (id, event_id, question, deadline) VALUES (?, ?, ?, ?)`

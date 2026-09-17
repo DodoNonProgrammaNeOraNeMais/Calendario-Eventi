@@ -1,4 +1,6 @@
 // functions/api/admin/events/[id].js
+const POLL_OPTIONS = ["Sì", "No", "Forse"]; // opzioni standard per tutti i sondaggi
+
 export async function onRequestPut({ params, request, env }) {
   try {
     const body = await request.json().catch(() => null);
@@ -53,10 +55,10 @@ export async function onRequestPut({ params, request, env }) {
       .bind(params.id)
       .first();
 
-    const options = poll && Array.isArray(poll.options) ? poll.options.map((o) => o.trim()).filter(Boolean) : [];
-    const wantsPoll = poll && poll.question && poll.deadline && options.length >= 2;
+    const wantsPoll = poll && poll.question && poll.deadline;
 
     if (wantsPoll) {
+      const options = POLL_OPTIONS; // opzioni standard, non modificabili
       let pollId = existingPoll ? existingPoll.id : crypto.randomUUID();
       if (existingPoll) {
         statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(pollId));
@@ -109,13 +111,15 @@ export async function onRequestDelete({ params, env }) {
       .bind(params.id)
       .first();
 
-    const statements = [];
+        const statements = [];
+    // I partecipanti vanno cancellati PRIMA dei voti: alcuni sono collegati a un voto (vote_id)
+    // e cancellare il voto mentre il collegamento esiste ancora viola il vincolo di integrità.
+    statements.push(env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id));
     if (poll) {
       statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(poll.id));
       statements.push(env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(poll.id));
       statements.push(env.DB.prepare(`DELETE FROM polls WHERE id = ?`).bind(poll.id));
     }
-    statements.push(env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id));
     statements.push(env.DB.prepare(`DELETE FROM events WHERE id = ?`).bind(params.id));
 
     await env.DB.batch(statements);

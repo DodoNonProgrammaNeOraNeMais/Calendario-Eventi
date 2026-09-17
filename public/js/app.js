@@ -73,11 +73,9 @@ async function loadCalendar() {
     cell.className =
       "calendar-day" +
       (d.getMonth() !== currentMonth.getMonth() ? " outside" : "") +
+      (dayEvents.length ? " has-event" : "") +
       (iso === today ? " today" : "");
-    cell.innerHTML = `<span class="day-number">${d.getDate()}</span><span class="day-dots">${dayEvents
-      .slice(0, 4)
-      .map(() => `<span class="day-dot"></span>`)
-      .join("")}</span>`;
+    cell.innerHTML = `<span class="day-number">${d.getDate()}</span>`;
 
     if (dayEvents.length) {
       cell.addEventListener("click", () => showDayEvents(iso, dayEvents));

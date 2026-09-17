@@ -14,11 +14,14 @@ export async function onRequestGet({ request, env }) {
       params.push(from, to);
     }
 
-    query += ` ORDER BY start_date DESC`;
+       query += ` ORDER BY start_date ASC`;
 
     const stmt = env.DB.prepare(query);
     const eventsResult = params.length ? await stmt.bind(...params).all() : await stmt.all();
-    const events = eventsResult.results || [];
+    const events = (eventsResult.results || []).map((e) => ({
+      ...e,
+      image_url: e.image_key ? `/api/images/${e.image_key}` : null,
+    }));
 
     return new Response(JSON.stringify(events), {
       headers: { 
