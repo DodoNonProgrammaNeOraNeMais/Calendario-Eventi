@@ -19,7 +19,7 @@ export async function onRequestGet({ params, env, request }) {
     ).bind(poll.id).all();
 
     const { results: detailedVotes } = await env.DB.prepare(
-      `SELECT v.id as vote_id, v.voter_name, po.label as option_label 
+      `SELECT v.id as vote_id, v.voter_name, v.status, po.label as option_label 
        FROM votes v 
        JOIN poll_options po ON v.option_id = po.id 
        WHERE v.poll_id = ?

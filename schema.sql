@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS participants (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event_id TEXT NOT NULL REFERENCES events(id),
-  name TEXT NOT NULL
+  name TEXT NOT NULL,
+  vote_id INTEGER REFERENCES votes(id)  -- valorizzato solo se il partecipante è stato aggiunto in automatico accettando un voto al sondaggio; NULL se inserito a mano dall'admin
 );
 
 CREATE TABLE IF NOT EXISTS polls (
@@ -36,6 +37,8 @@ CREATE TABLE IF NOT EXISTS votes (
   option_id INTEGER NOT NULL REFERENCES poll_options(id),
   voter_token TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  voter_name TEXT,            -- nome inserito da chi vota, mostrato nel dettaglio evento e nel pannello admin
+  status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'accepted' | 'rejected': decisione dell'admin su questo voto
   UNIQUE(poll_id, voter_token)  -- un solo voto per persona per sondaggio (si aggiorna, non si duplica)
 );
 

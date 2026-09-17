@@ -1,4 +1,5 @@
-// Funzioni condivise tra le pagine pubbliche
+const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
+
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -73,6 +74,22 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 2500);
 }
 
+function openImageFullscreen(url) {
+  if (!url) return;
+  const existing = document.querySelector(".image-fullscreen-backdrop");
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "image-fullscreen-backdrop";
+  backdrop.innerHTML = `<img src="${url}" alt="Immagine a schermo intero">`;
+  
+  backdrop.addEventListener("click", () => {
+    backdrop.remove();
+  });
+  
+  document.body.appendChild(backdrop);
+}
+
 function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "modal-wrap";
@@ -115,9 +132,10 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         ${
           event.poll.isOpen && !event.poll.myOptionId
             ? `<div style="margin-bottom: 1rem;">
-                 <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Il tuo nome per votare:</label>
+                  <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Nome e cognome, per votare:</label>
                  <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
-               </div>`
+               </div>
+               <div class="turnstile-container" style="margin-bottom: 1rem;"></div>`
             : ""
         }
         ${optionsHtml}
@@ -145,6 +163,35 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
     </div>
   `;
 
+  let turnstileWidgetId = null;
+  const turnstileContainer = wrap.querySelector(".turnstile-container");
+  if (turnstileContainer && window.turnstile) {
+    setTimeout(() => {
+      try {
+        turnstile.ready(() => {
+          try {
+            turnstileWidgetId = turnstile.render(turnstileContainer, {
+              sitekey: TURNSTILE_SITE_KEY,
+              theme: "light",
+            });
+          } catch (e) {
+            console.error("Turnstile render error:", e);
+          }
+        });
+      } catch (e) {
+        console.error("Turnstile ready error:", e);
+      }
+    }, 0);
+  }
+
+  const coverImg = wrap.querySelector("img.cover");
+  if (coverImg) {
+    coverImg.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openImageFullscreen(coverImg.src);
+    });
+  }
+
   wrap.querySelector("[data-share]").addEventListener("click", () => shareEvent(event));
 
   wrap.querySelectorAll("[data-vote-option]").forEach((btn) => {
@@ -154,12 +201,26 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         const nameInput = wrap.querySelector("#voter-name-input");
         voterName = nameInput ? nameInput.value.trim() : "";
         if (!voterName) {
-          showToast("Inserisci il tuo nome per votare!");
+          showToast("Inserisci nome e cognome per votare!");
+          if (nameInput) nameInput.focus();
+          return;
+        }
+        if (!/\S+\s+\S+/.test(voterName)) {
+          showToast("Inserisci sia il nome che il cognome (es. Mario Rossi)");
           if (nameInput) nameInput.focus();
           return;
         }
       } else {
         voterName = null; 
+      }
+
+      let turnstileToken = null;
+      if (!event.poll.myOptionId) {
+        turnstileToken = turnstileWidgetId !== null ? turnstile.getResponse(turnstileWidgetId) : null;
+        if (!turnstileToken) {
+          showToast("Completa la verifica anti-spam prima di votare");
+          return;
+        }
       }
 
       btn.disabled = true;
@@ -170,7 +231,8 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           body: JSON.stringify({ 
             pollId: event.poll.id, 
             optionId: Number(btn.dataset.voteOption),
-            voterName: voterName 
+            voterName: voterName,
+            turnstileToken: turnstileToken,
           }),
         });
         if (!res.ok) throw new Error(await res.text());
@@ -178,6 +240,14 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       } catch (e) {
         showToast("Non e' stato possibile registrare il voto");
         btn.disabled = false;
+      } finally {
+        if (turnstileWidgetId !== null && window.turnstile) {
+          try {
+            turnstile.reset(turnstileWidgetId);
+          } catch (resetErr) {
+            console.error("Errore reset Turnstile:", resetErr);
+          }
+        }
       }
     });
   });

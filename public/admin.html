@@ -58,8 +58,7 @@
             <input type="text" id="poll-question" placeholder="Es. Vieni alla festa?">
 
             <label>Opzioni di risposta</label>
-            <div id="poll-options"></div>
-            <button type="button" id="add-option" class="secondary" style="margin-top:0.3rem;">+ Aggiungi opzione</button>
+            <p style="margin:0.2rem 0 0.8rem; color:#666;">Fisse per tutti i sondaggi: <b>Sì</b>, <b>No</b>, <b>Forse</b>.</p>
 
             <label for="poll-deadline">Il sondaggio si chiude il</label>
             <input type="datetime-local" id="poll-deadline">
@@ -80,6 +79,7 @@
   </main>
 
   <script src="/js/shared.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
   <script src="/js/admin.js" defer></script>
 </body>
 </html>

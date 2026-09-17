@@ -1,26 +1,38 @@
-// GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD
-// Elenco pubblico degli eventi, opzionalmente filtrato per intervallo di date.
+// functions/api/events/index.js
 export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const from = url.searchParams.get("from");
-  const to = url.searchParams.get("to");
+  try {
+    const url = new URL(request.url);
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
 
-  let query = `SELECT id, slug, title, description, image_key, start_date, end_date FROM events`;
-  const params = [];
+    let query = `SELECT * FROM events`;
+    const params = [];
 
-  if (from && to) {
-    // include ogni evento che si sovrappone all'intervallo richiesto
-    query += ` WHERE start_date <= ? AND end_date >= ?`;
-    params.push(to, from);
+    // Se sono specificati i filtri data, filtriamo gli eventi sovrapposti all'intervallo
+    if (from && to) {
+      query += ` WHERE end_date >= ? AND start_date <= ?`;
+      params.push(from, to);
+    }
+
+       query += ` ORDER BY start_date ASC`;
+
+    const stmt = env.DB.prepare(query);
+    const eventsResult = params.length ? await stmt.bind(...params).all() : await stmt.all();
+    const events = (eventsResult.results || []).map((e) => ({
+      ...e,
+      image_url: e.image_key ? `/api/images/${e.image_key}` : null,
+    }));
+
+    return new Response(JSON.stringify(events), {
+      headers: { 
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
+      }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
-  query += ` ORDER BY start_date ASC`;
-
-  const { results } = await env.DB.prepare(query).bind(...params).all();
-
-  const events = results.map((e) => ({
-    ...e,
-    image_url: e.image_key ? `/api/images/${e.image_key}` : null,
-  }));
-
-  return Response.json(events);
 }

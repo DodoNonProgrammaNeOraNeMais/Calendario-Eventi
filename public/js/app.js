@@ -73,11 +73,9 @@ async function loadCalendar() {
     cell.className =
       "calendar-day" +
       (d.getMonth() !== currentMonth.getMonth() ? " outside" : "") +
+      (dayEvents.length ? " has-event" : "") +
       (iso === today ? " today" : "");
-    cell.innerHTML = `<span class="day-number">${d.getDate()}</span><span class="day-dots">${dayEvents
-      .slice(0, 4)
-      .map(() => `<span class="day-dot"></span>`)
-      .join("")}</span>`;
+    cell.innerHTML = `<span class="day-number">${d.getDate()}</span>`;
 
     if (dayEvents.length) {
       cell.addEventListener("click", () => showDayEvents(iso, dayEvents));
@@ -109,9 +107,9 @@ function showDayEvents(iso, dayEvents) {
           ${dayEvents
             .map(
               (e) => `
-            <button type="button" class="event-card" data-slug="${e.slug}">
-              ${e.image_url ? `<img src="${e.image_url}" alt="">` : ""}
-              <div class="event-card-body"><h3>${escapeHtml(e.title)}</h3></div>
+            <button type="button" class="event-card" data-slug="${e.slug}" style="width: 100%; border: none; background: inherit; cursor: pointer;">
+              ${e.image_url ? `<img src="${e.image_url}" alt="" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">` : ""}
+              <div class="event-card-body" style="flex:1; text-align: left;"><h3>${escapeHtml(e.title)}</h3></div>
             </button>`
             )
             .join("")}
@@ -121,7 +119,11 @@ function showDayEvents(iso, dayEvents) {
   backdrop.appendChild(modal);
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) root.innerHTML = ""; });
   modal.querySelector("[data-close]").addEventListener("click", () => (root.innerHTML = ""));
-  modal.querySelectorAll("[data-slug]").forEach((el) => el.addEventListener("click", () => openEventModal(el.dataset.slug)));
+  
+  modal.querySelectorAll("[data-slug]").forEach((el) => {
+    el.addEventListener("click", () => openEventModal(el.dataset.slug));
+  });
+
   root.appendChild(backdrop);
 }
 
@@ -150,13 +152,15 @@ async function loadUpcoming() {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "event-card";
+    // L'immagine qui è pura anteprima visiva: il click sull'intera card apre correttamente i dettagli
     card.innerHTML = `
-      ${e.image_url ? `<img src="${e.image_url}" alt="">` : ""}
+      ${e.image_url ? `<img src="${e.image_url}" alt="" style="pointer-events: none;">` : ""}
       <div class="event-card-body">
         <div class="event-date">${formatDateRange(e.start_date, e.end_date)}</div>
         <h3>${escapeHtml(e.title)}</h3>
         ${e.description ? `<p>${escapeHtml(e.description)}</p>` : ""}
       </div>`;
+    
     card.addEventListener("click", () => openEventModal(e.slug));
     list.appendChild(card);
   });
