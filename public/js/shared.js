@@ -4,60 +4,79 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 // niente da configurare, sparisce automaticamente a novembre.
 // Per testarlo in anticipo basta aggiungere ?theme=foliage all'URL.
 (function applySeasonalFoliageTheme() {
-  const isOctober = new Date().getMonth() === 9; // 0 = gennaio, quindi 9 = ottobre
+  const isOctober = new Date().getMonth() === 9;
   const forced = new URLSearchParams(window.location.search).get("theme") === "foliage";
   if (!isOctober && !forced) return;
+
   document.documentElement.classList.add("theme-foliage");
 
-  const LEAF_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22C7 21 2.5 16.8 3.2 11.2 3.8 6.4 8 2.3 13 2c4 3.5 6 8.6 4.3 13.4C15.9 19.3 12 22 12 22z"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.4" stroke-width="1.1" stroke-linecap="round" d="M12.5 21C11.8 16 12 9.5 13.2 3"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.6 15L9 12.5M12.3 11L8.3 9M12.8 18.5L9.7 16.7"/><path fill="none" stroke="#2b1a0f" stroke-opacity="0.28" stroke-width="0.7" stroke-linecap="round" d="M12.9 15.3L16.3 12.5M12.6 11.2L16.2 8.7M13 18.7L15.7 16.5"/></svg>';
-
+  const LEAF_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c5 3 9 7 9 12a9 9 0 0 1-18 0c0-5 4-9 9-12z"/></svg>';
   const LEAF_COLORS = ["#c9622a", "#a83f1e", "#c98a2c", "#8a3d15", "#d9a13a", "#b5541f", "#7a6a1f", "#96631c", "#e0a24a", "#9c4a1a"];
-  const LEAF_COUNT = 30;
 
-  // Solo 3 cumuli, grandi e sparsi (non equidistanti), con ampi vuoti tra
-  // loro: uno vicino al bordo sinistro, uno verso il centro-destra, uno
-  // vicino al bordo destro.
+  // Foglie in caduta: 24 bastano per l'effetto e costano molto meno di 30+.
+  const LEAF_COUNT = 24;
+
+  // 3 cumuli, spread più stretto = foglie che si sovrappongono e formano
+  // un mucchio leggibile invece di puntini sparsi. startLevel più basso:
+  // il volume iniziale lo dà l'ombra sfumata sotto, non decine di nodi.
   const PILE_SPOTS = [
-    { center: 6,  spread: 8,  startLevel: 30 },
-    { center: 52, spread: 9,  startLevel: 22 },
-    { center: 90, spread: 8,  startLevel: 34 },
+    { center: 6, spread: 5, startLevel: 14 },
+    { center: 52, spread: 6, startLevel: 12 },
+    { center: 90, spread: 5, startLevel: 15 },
   ];
-  const MAX_PILE_LEAVES = 320;
+
+  // Cap molto più basso: un cumulo "grande" si legge già con poche decine
+  // di foglie ben sovrapposte; oltre non aggiunge nulla, solo peso.
+  const MAX_PILE_LEAVES_PER_SPOT = 20;
 
   function injectLeaves() {
     if (document.querySelector(".leaves-layer")) return;
 
-    // TUTTO in un unico livello DOM: foglie che cadono, tappeto di base e
-    // cumuli sono tutti figli diretti dello stesso contenitore .leaves-layer.
     const layer = document.createElement("div");
     layer.className = "leaves-layer";
     document.body.prepend(layer);
 
-    // 1) Tappeto di base FITTO lungo tutta la larghezza, presente da subito.
+    // 1) Banda di base sfumata: un solo elemento, un solo paint.
+    const baseBand = document.createElement("div");
+    baseBand.className = "leaf-carpet-base";
+    layer.appendChild(baseBand);
+
+    // 2) Tappeto: due file sfalsate invece di una riga sola, con passo più
+    // largo per limitare il numero di nodi ma senza vuoti percepibili
+    // grazie alla banda sfumata sottostante e alla variazione di dimensione.
     seedBaseCarpet(layer);
 
-    // 2) I 3 cumuli grandi, già ben visibili al caricamento.
+    // 3) I 3 cumuli: ombra di ancoraggio + foglie sovrapposte.
     PILE_SPOTS.forEach((spot) => {
+      const shadow = document.createElement("div");
+      shadow.className = "leaf-pile-shadow";
+      shadow.style.left = spot.center + "vw";
+      layer.appendChild(shadow);
+
       for (let n = 0; n < spot.startLevel; n++) {
         const gauss = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
         const jitteredLeft = spot.center + gauss * spot.spread;
         const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-        const size = 13 + Math.round(Math.random() * 14);
+        const size = 15 + Math.round(Math.random() * 13);
         addPileLeaf(layer, jitteredLeft, size, color, spot, true);
       }
     });
 
-    // 3) Le foglie che cadono dall'alto.
+    // 4) Le foglie che cadono dall'alto, con oscillazione compositor-only.
     for (let i = 0; i < LEAF_COUNT; i++) {
       const leaf = document.createElement("div");
       leaf.className = "leaf";
-      leaf.innerHTML = LEAF_SVG;
+
+      const sway = document.createElement("div");
+      sway.className = "leaf-sway";
+      sway.innerHTML = LEAF_SVG;
+      leaf.appendChild(sway);
 
       const size = 13 + Math.round(Math.random() * 15);
       const left = Math.random() * 100;
       const duration = 9 + Math.random() * 15;
       const delay = -Math.random() * 24;
-      const drift = Math.round((Math.random() - 0.5) * 170);
+      const drift = Math.round((Math.random() - 0.5) * 170) + "px";
       const rotStart = Math.round(Math.random() * 360);
       const rotEnd = rotStart + (Math.random() > 0.5 ? 1 : -1) * (260 + Math.random() * 280);
       const color = LEAF_COLORS[i % LEAF_COLORS.length];
@@ -65,20 +84,19 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
       const flip = Math.random() > 0.5 ? -1 : 1;
 
       leaf.style.left = left + "vw";
-      leaf.style.width = size + "px";
-      leaf.style.height = size + "px";
+      leaf.style.setProperty("--leaf-size", size + "px");
       leaf.style.color = color;
-      leaf.style.setProperty("--drift", drift + "px");
+      leaf.style.setProperty("--drift", drift);
       leaf.style.setProperty("--rot-start", rotStart + "deg");
       leaf.style.setProperty("--rot-end", rotEnd + "deg");
       leaf.style.setProperty("--flip", flip);
-      leaf.style.animationDuration = duration + "s, " + swayDuration + "s";
-      leaf.style.animationDelay = delay + "s, " + (delay * 0.4) + "s";
+      leaf.style.animationDuration = duration + "s";
+      leaf.style.animationDelay = delay + "s";
+      sway.style.animationDuration = swayDuration + "s";
+      sway.style.animationDelay = (delay * 0.4) + "s";
 
       layer.appendChild(leaf);
 
-      // Quando una foglia completa la caduta, va ad ALIMENTARE uno dei 3
-      // cumuli esistenti (nessun cumulo nuovo: restano sempre e solo 3).
       leaf.addEventListener("animationiteration", () => {
         landLeaf(layer, left, size, color);
       });
@@ -86,35 +104,45 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   }
 
   function seedBaseCarpet(layer) {
-    // Tappeto FITTO: una foglia ogni ~0.9vw, quasi senza vuoti, cosi' il
-    // fondo risulta subito ricoperto e non "rado".
-    for (let x = 0; x <= 100; x += 0.9) {
-      if (Math.random() < 0.08) continue;
-      const left = x + (Math.random() - 0.5) * 0.7;
-      const size = 11 + Math.round(Math.random() * 10);
-      const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-      const piled = document.createElement("div");
-      piled.className = "leaf-pile leaf-pile--seed leaf-pile--base";
-      piled.innerHTML = LEAF_SVG;
-      piled.style.left = Math.max(0, Math.min(100, left)) + "vw";
-      piled.style.bottom = Math.random() * 5 + "px";
-      piled.style.width = size + "px";
-      piled.style.height = size + "px";
-      piled.style.color = color;
-      piled.style.setProperty("--settle-rot", Math.round(Math.random() * 360) + "deg");
-      piled.style.zIndex = "1";
-      layer.appendChild(piled);
+    // Due file sfalsate (passo più largo, ~1.6vw) invece di una riga fitta
+    // ogni 0.9vw: meno nodi totali, ma percepito "pieno" grazie alla banda
+    // sfumata sotto e all'alternanza di quota tra le due file.
+    for (let x = 0; x <= 100; x += 1.6) {
+      if (Math.random() < 0.06) continue;
+      addCarpetLeaf(layer, x, 0);
+    }
+    for (let x = 0.8; x <= 100; x += 1.7) {
+      if (Math.random() < 0.1) continue;
+      addCarpetLeaf(layer, x, 1);
     }
   }
 
+  function addCarpetLeaf(layer, x, row) {
+    const left = x + (Math.random() - 0.5) * 0.8;
+    const size = row === 0 ? 12 + Math.round(Math.random() * 8) : 9 + Math.round(Math.random() * 6);
+    const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
+    const piled = document.createElement("div");
+    piled.className = "leaf-pile leaf-pile--seed leaf-pile--base";
+    piled.innerHTML = LEAF_SVG;
+    piled.style.left = Math.max(0, Math.min(100, left)) + "vw";
+    piled.style.bottom = (row === 0 ? Math.random() * 4 : 4 + Math.random() * 8) + "px";
+    piled.style.width = size + "px";
+    piled.style.height = size + "px";
+    piled.style.color = color;
+    piled.style.setProperty("--settle-rot", Math.round(Math.random() * 360) + "deg");
+    piled.style.zIndex = String(row);
+    layer.appendChild(piled);
+  }
+
   function pickPileSpot(nearLeft) {
-    // Assegna sempre la foglia al cumulo più vicino tra i 3 esistenti:
-    // non nascono mai nuovi cumuli, restano sempre e solo 3.
     let closest = PILE_SPOTS[0];
     let minDist = Infinity;
     PILE_SPOTS.forEach((spot) => {
       const dist = Math.abs(spot.center - nearLeft);
-      if (dist < minDist) { minDist = dist; closest = spot; }
+      if (dist < minDist) {
+        minDist = dist;
+        closest = spot;
+      }
     });
     return closest;
   }
@@ -127,9 +155,12 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
   }
 
   function addPileLeaf(layer, leftVw, size, color, spot, isSeed) {
-    const realLeaves = layer.querySelectorAll(".leaf-pile:not(.leaf-pile--base)");
-    if (realLeaves.length >= MAX_PILE_LEAVES) {
-      realLeaves[0].remove();
+    // Cap per singolo cumulo (non globale): garantisce che ognuno dei 3
+    // resti sempre pieno e coerente, e mai sovraccaricato di nodi vecchi.
+    if (!spot.leaves) spot.leaves = [];
+    if (spot.leaves.length >= MAX_PILE_LEAVES_PER_SPOT) {
+      const oldest = spot.leaves.shift();
+      oldest.remove();
     }
 
     const piled = document.createElement("div");
@@ -137,12 +168,10 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     piled.innerHTML = LEAF_SVG;
 
     spot.count = (spot.count || 0) + 1;
-    // Crescita in altezza marcata: i 3 cumuli devono risultare grandi ed
-    // evidenti, non un accumulo timido di puntini.
-    const heightBoost = Math.min(spot.count * 1.1, 78);
-    const pileSize = Math.max(11, size * (0.85 + Math.random() * 0.35));
+    const heightBoost = Math.min(spot.count * 1.6, 46);
+    const pileSize = Math.max(13, size * (0.85 + Math.random() * 0.3));
     const rot = Math.round(Math.random() * 360);
-    const bottomJitter = heightBoost * (0.75 + Math.random() * 0.5);
+    const bottomJitter = heightBoost * (0.8 + Math.random() * 0.35);
     const clampedLeft = Math.max(0, Math.min(100, leftVw));
 
     piled.style.left = clampedLeft + "vw";
@@ -155,6 +184,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
     if (isSeed) piled.classList.add("leaf-pile--seed");
 
     layer.appendChild(piled);
+    spot.leaves.push(piled);
   }
 
   if (document.body) injectLeaves();
