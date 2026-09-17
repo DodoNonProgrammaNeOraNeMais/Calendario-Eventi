@@ -187,7 +187,14 @@ async function loadAdminEvents() {
 }
 
 async function startEdit(id, slug) {
-  const event = await apiGet(`/api/events/${slug}`);
+  // Chiamata alle API admin per avere l'evento completo di voti e partecipanti
+  let event = null;
+  try {
+    event = await apiGet(`/api/admin/events/${id}`);
+  } catch (e) {
+    event = await apiGet(`/api/events/${slug}`);
+  }
+
   editingId = id;
   uploadedImageKey = null;
 
@@ -226,48 +233,17 @@ async function startEdit(id, slug) {
     document.getElementById("poll-fields").style.display = "block";
     document.getElementById("poll-question").value = event.poll.question;
     document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
+    event.poll.options.forEach((o) => addOptionRow(o.label));
 
     if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
-      const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no");
-      const noVotes = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() === "no");
-            const nameCounts = {};
+      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Voti Ricevuti (Gestione)</h4>`;
       event.poll.detailedVotes.forEach(v => {
-        const key = v.voter_name.trim().toLowerCase();
-        nameCounts[key] = (nameCounts[key] || 0) + 1;
-      });
-
-      const statusLabel = { pending: "In attesa", accepted: "Accettato ✅", rejected: "Rifiutato ❌" };
-
-      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Richieste di partecipazione</h4>`;
-
-      if (toReview.length === 0) {
-        votesContainer.innerHTML += `<p class="empty-state" style="margin:0 0 10px;">Nessuna risposta Sì/Forse da valutare.</p>`;
-      }
-
-      toReview.forEach(v => {
         const row = document.createElement("div");
         row.style.marginBottom = "8px";
-        const acceptBtn = v.status !== "accepted"
-          ? `<button type="button" class="secondary" style="padding:2px 8px; margin-left:10px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'accepted', '${slug}')">Accetta</button>`
-          : "";
-        const rejectBtn = v.status !== "rejected"
-          ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'rejected', '${slug}')">Rifiuta</button>`
-          : "";
-               const isDuplicateName = nameCounts[v.voter_name.trim().toLowerCase()] > 1;
-        const dupBadge = isDuplicateName ? ` <span style="color:#b45309; font-size:11px;">⚠ nome ripetuto, verifica se è la stessa persona</span>` : "";
-        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato <i>${escapeHtml(v.option_label)}</i>${dupBadge}
-                         — <span>${statusLabel[v.status] || v.status}</span>
-                         ${acceptBtn}${rejectBtn}`;
+        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato: <i>${escapeHtml(v.option_label)}</i> 
+                         <button type="button" class="danger" style="padding:2px 6px; margin-left:10px; font-size:12px;" onclick="deleteVote(${v.vote_id}, '${slug}')">Rifiuta</button>`;
         votesContainer.appendChild(row);
       });
-
-      if (noVotes.length > 0) {
-        const noBox = document.createElement("div");
-        noBox.style.marginTop = "14px";
-        noBox.style.color = "#666";
-        noBox.innerHTML = `<b>Hanno risposto No:</b> ${noVotes.map(v => escapeHtml(v.voter_name)).join(", ")}`;
-        votesContainer.appendChild(noBox);
-      }
     }
   } else {
     document.getElementById("poll-toggle").checked = false;
@@ -299,23 +275,15 @@ async function deleteEvent(id) {
   }
 }
 
-window.setVoteStatus = async function(voteId, status, slug) {
-  const messages = {
-    accepted: "Confermi di voler accettare questa partecipazione? Il nome verrà aggiunto ai partecipanti.",
-    rejected: "Confermi di voler rifiutare questa partecipazione? Il nome NON verrà aggiunto (o verrà rimosso se già aggiunto).",
-  };
-  if (messages[status] && !confirm(messages[status])) return;
+window.deleteVote = async function(voteId, slug) {
+  if (!confirm("Vuoi rifiutare e annullare questo voto?")) return;
   try {
-    const res = await fetch(`/api/admin/votes/${voteId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    showToast(status === "accepted" ? "Partecipante aggiunto" : "Richiesta rifiutata");
-    startEdit(editingId, slug);
-  } catch (e) {
-    showToast("Errore durante l'aggiornamento del voto");
+    const res = await fetch(`/api/admin/votes/${voteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error("Errore");
+    showToast("Voto rimosso con successo");
+    startEdit(editingId, slug); 
+  } catch(e) {
+    showToast("Errore durante l'eliminazione");
   }
 }
 
