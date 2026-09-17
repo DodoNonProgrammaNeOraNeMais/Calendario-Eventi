@@ -131,7 +131,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
         ${
           event.poll.isOpen && !event.poll.myOptionId
             ? `<div style="margin-bottom: 1rem;">
-                 <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Il tuo nome per votare:</label>
+                  <label for="voter-name-input" style="display:block; margin-bottom:0.25rem; font-weight:600;">Nome e cognome, per votare:</label>
                  <input type="text" id="voter-name-input" placeholder="Es. Mario Rossi" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
                </div>`
             : ""
@@ -176,9 +176,14 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       let voterName = null;
       if (!event.poll.myOptionId) {
         const nameInput = wrap.querySelector("#voter-name-input");
-        voterName = nameInput ? nameInput.value.trim() : "";
+               voterName = nameInput ? nameInput.value.trim() : "";
         if (!voterName) {
-          showToast("Inserisci il tuo nome per votare!");
+          showToast("Inserisci nome e cognome per votare!");
+          if (nameInput) nameInput.focus();
+          return;
+        }
+        if (!/\S+\s+\S+/.test(voterName)) {
+          showToast("Inserisci sia il nome che il cognome (es. Mario Rossi)");
           if (nameInput) nameInput.focus();
           return;
         }
