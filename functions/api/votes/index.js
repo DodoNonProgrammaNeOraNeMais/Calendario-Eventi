@@ -1,10 +1,57 @@
-// POST /api/votes { pollId, optionId, voterName } -> vota o cambia voto
+// POST /api/votes { pollId, optionId, voterName, turnstileToken } -> vota o cambia voto
 // DELETE /api/votes?pollId=... -> ritira il voto
 
+// Verifica il token Turnstile generato dal widget lato client contro l'API di Cloudflare.
+// Fondamentale: senza questo controllo il widget e' solo decorazione, chiunque puo' chiamare
+// l'endpoint direttamente (es. con curl) ignorando il frontend.
+async function verifyTurnstile(token, ip, secret) {
+  if (!token || !secret) return false;
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret, response: token, remoteip: ip || "" }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Rate limiting minimo per IP, complementare a Turnstile: usa una tabella D1 (vedi schema.sql).
+// Finestra di 60 secondi, max 8 richieste per IP. Se la tabella non esiste ancora (schema non
+// aggiornato) il controllo fallisce in modo "aperto" (non blocca), per non rompere il sito.
+async function checkRateLimit(env, ip, action, max = 8) {
+  try {
+    const bucket = Math.floor(Date.now() / 60000); // finestra di 1 minuto
+    const key = `${action}:${ip || "unknown"}:${bucket}`;
+    const row = await env.DB.prepare(
+      `INSERT INTO rate_limits (bucket_key, count) VALUES (?, 1)
+       ON CONFLICT(bucket_key) DO UPDATE SET count = count + 1
+       RETURNING count`
+    ).bind(key).first();
+    return row.count <= max;
+  } catch (e) {
+    return true; // tabella assente o errore D1: non blocchiamo il voto per questo
+  }
+}
+
 export async function onRequestPost({ request, env }) {
+  const ip = request.headers.get("CF-Connecting-IP");
+
+  if (!(await checkRateLimit(env, ip, "vote-post"))) {
+    return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+  }
+
   const body = await request.json().catch(() => null);
   if (!body || !body.pollId || !body.optionId) {
     return new Response("Dati mancanti", { status: 400 });
+  }
+
+  const turnstileOk = await verifyTurnstile(body.turnstileToken, ip, env.TURNSTILE_SECRET_KEY);
+  if (!turnstileOk) {
+    return new Response("Verifica anti-spam non superata, riprova", { status: 403 });
   }
 
   const poll = await env.DB.prepare(`SELECT * FROM polls WHERE id = ?`).bind(body.pollId).first();
@@ -55,6 +102,11 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (!(await checkRateLimit(env, ip, "vote-delete"))) {
+    return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+  }
+
   const url = new URL(request.url);
   const pollId = url.searchParams.get("pollId");
   if (!pollId) return new Response("pollId mancante", { status: 400 });
