@@ -24,8 +24,11 @@ export async function onRequestPost({ request, env }) {
   if (!voterName && existingVote) {
     voterName = existingVote.voter_name;
   }
-  if (!voterName) {
+    if (!voterName) {
     return new Response("Il nome è obbligatorio per votare", { status: 400 });
+  }
+  if (!/\S+\s+\S+/.test(voterName)) {
+    return new Response("Inserisci sia il nome che il cognome (es. Mario Rossi)", { status: 400 });
   }
 
   // L'identità del voto è determinata SOLO dal cookie del browser (voter_token), mai dal nome scritto:
