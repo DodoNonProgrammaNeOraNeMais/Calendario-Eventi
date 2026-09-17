@@ -728,16 +728,38 @@ html.theme-foliage body::after { display: none !important; }
   50%      { margin-left: 14px; }
 }
 
-/* Cumuli di foglie: ognuno con la propria "forma" (largo/basso, stretto/alto,
-   simmetrico/asimmetrico), già grandi e presenti al caricamento della
-   pagina. Le foglie che cadono alimentano i cumuli esistenti più vicini e,
-   con una certa probabilità, ne fanno nascere di nuovi altrove. */
+/* Alberi di castagno: due sagome fisse ai lati, dimensioni diverse. */
+.trees-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.chestnut-tree {
+  position: absolute;
+  bottom: 0;
+  opacity: .92;
+  filter: drop-shadow(0 6px 10px rgba(40, 30, 15, .18));
+}
+
+.chestnut-tree svg {
+  display: block;
+  width: auto;
+  height: 100%;
+}
+
+.chestnut-tree--left svg { transform: scaleX(-1); }
+
+/* Tappeto di foglie: base continua lungo tutta la larghezza, presente già
+   al caricamento, sopra la quale crescono i cumuli nei punti "di vento". */
 .leaves-pile {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 180px;
+  height: 140px;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
@@ -754,6 +776,10 @@ html.theme-foliage body::after { display: none !important; }
   animation: none;
 }
 
+.pile-leaf--base {
+  opacity: .8;
+}
+
 .pile-leaf svg {
   display: block;
   width: 100%;
@@ -766,9 +792,61 @@ html.theme-foliage body::after { display: none !important; }
   100% { transform: translateY(0)     rotate(var(--settle-rot, 0deg)); opacity: .9; }
 }
 
+/* Castagne che cadono dagli alberi. */
+.chestnut {
+  position: fixed;
+  top: -4vh;
+  z-index: -1;
+  opacity: .95;
+  pointer-events: none;
+  animation: chestnut-fall var(--fall-duration, 2s) cubic-bezier(.4, 0, .8, 1) forwards;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+}
+
+.chestnut svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes chestnut-fall {
+  0%   { transform: translateY(0)     translateX(0)                 rotate(0deg); }
+  100% { transform: translateY(100vh) translateX(var(--drift, 20px)) rotate(var(--rot, 300deg)); }
+}
+
+.chestnut--sinking {
+  animation: chestnut-sink .5s ease-in forwards;
+}
+
+@keyframes chestnut-sink {
+  0%   { opacity: .95; transform: translateY(100vh) scale(1); }
+  100% { opacity: 0;   transform: translateY(102vh) scale(.4); }
+}
+
+/* Castagne che restano visibili, depositate sul tappeto di foglie. */
+.pile-chestnut {
+  position: absolute;
+  bottom: 0;
+  z-index: 3;
+  opacity: .95;
+  animation: pile-settle .5s ease-out forwards;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+
+.pile-chestnut svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .leaf { animation: none; top: 8%; opacity: .35; }
   .pile-leaf { animation: none; }
+  .chestnut { display: none; }
+}
+
+@media (max-width: 760px) {
+  .chestnut-tree { display: none; }
 }
 
 /* Accessibilità */
