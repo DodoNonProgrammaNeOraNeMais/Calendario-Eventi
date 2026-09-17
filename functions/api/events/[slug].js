@@ -6,8 +6,9 @@ export async function onRequestGet({ params, request, env }) {
     const event = await env.DB.prepare(`SELECT * FROM events WHERE slug = ?`).bind(slug).first();
     if (!event) return new Response("Evento non trovato", { status: 404 });
 
+    // Rimosso ORDER BY created_at ASC per evitare il crash su SQLite D1
     const participantsRes = await env.DB.prepare(
-      `SELECT name FROM participants WHERE event_id = ? ORDER BY created_at ASC`
+      `SELECT name FROM participants WHERE event_id = ? ORDER BY id ASC`
     ).bind(event.id).all();
 
     const poll = await env.DB.prepare(`SELECT * FROM polls WHERE event_id = ?`).bind(event.id).first();
