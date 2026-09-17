@@ -35,25 +35,7 @@ document.getElementById("poll-toggle").addEventListener("change", (e) => {
   document.getElementById("poll-fields").style.display = e.target.checked ? "block" : "none";
 });
 
-function addOptionRow(value = "") {
-  const container = document.getElementById("poll-options");
-  const row = document.createElement("div");
-  row.className = "option-row";
-  row.innerHTML = `<input type="text" value="${escapeHtml(value)}" placeholder="Opzione"><button type="button" aria-label="Rimuovi opzione">&times;</button>`;
-  row.querySelector("button").addEventListener("click", () => {
-    if (container.children.length > 2) row.remove();
-    else showToast("Servono almeno due opzioni");
-  });
-  container.appendChild(row);
-}
-document.getElementById("add-option").addEventListener("click", () => addOptionRow());
-
-function resetOptions() {
-  document.getElementById("poll-options").innerHTML = "";
-  addOptionRow();
-  addOptionRow();
-}
-resetOptions();
+const POLL_OPTIONS = ["Sì", "No", "Forse"]; // fisse, coerenti col backend
 
 document.getElementById("cancel-edit").addEventListener("click", resetForm);
 
@@ -65,7 +47,6 @@ function resetForm() {
   document.getElementById("image-drop").textContent = "Clicca per scegliere un'immagine (opzionale)";
   document.getElementById("poll-toggle").checked = false;
   document.getElementById("poll-fields").style.display = "none";
-  resetOptions();
   document.getElementById("submit-btn").textContent = "Crea evento";
   document.getElementById("cancel-edit").style.display = "none";
   
@@ -104,11 +85,9 @@ form.addEventListener("submit", async (e) => {
     const deadlineEl = document.getElementById("poll-deadline");
     const question = questionEl ? questionEl.value.trim() : "";
     const deadlineValue = deadlineEl ? deadlineEl.value : "";
-    const optionInputs = Array.from(document.querySelectorAll("#poll-options input"));
-    const options = optionInputs.map((i) => i.value.trim()).filter(Boolean);
 
-    if (!question || !deadlineValue || options.length < 2) {
-      showToast("Completa domanda, scadenza e almeno due opzioni del sondaggio");
+    if (!question || !deadlineValue) {
+      showToast("Completa domanda e scadenza del sondaggio");
       return;
     }
 
@@ -121,7 +100,7 @@ form.addEventListener("submit", async (e) => {
     poll = {
       question: question,
       deadline: deadlineDate.toISOString(),
-      options: options,
+      options: POLL_OPTIONS,
     };
   }
 
@@ -233,8 +212,6 @@ async function startEdit(id, slug) {
     document.getElementById("image-drop").textContent = "Clicca per scegliere un'immagine (opzionale)";
   }
 
-  document.getElementById("poll-options").innerHTML = "";
-  
   let votesContainer = document.getElementById("admin-votes-container");
   if (!votesContainer) {
     votesContainer = document.createElement("div");
@@ -249,23 +226,45 @@ async function startEdit(id, slug) {
     document.getElementById("poll-fields").style.display = "block";
     document.getElementById("poll-question").value = event.poll.question;
     document.getElementById("poll-deadline").value = toLocalDatetimeInputValue(event.poll.deadline);
-    event.poll.options.forEach((o) => addOptionRow(o.label));
 
     if (event.poll.detailedVotes && event.poll.detailedVotes.length > 0) {
-      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Voti Ricevuti (Gestione)</h4>`;
-      event.poll.detailedVotes.forEach(v => {
+      const toReview = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() !== "no");
+      const noVotes = event.poll.detailedVotes.filter(v => v.option_label.trim().toLowerCase() === "no");
+
+      const statusLabel = { pending: "In attesa", accepted: "Accettato ✅", rejected: "Rifiutato ❌" };
+
+      votesContainer.innerHTML = `<h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Richieste di partecipazione</h4>`;
+
+      if (toReview.length === 0) {
+        votesContainer.innerHTML += `<p class="empty-state" style="margin:0 0 10px;">Nessuna risposta Sì/Forse da valutare.</p>`;
+      }
+
+      toReview.forEach(v => {
         const row = document.createElement("div");
         row.style.marginBottom = "8px";
-        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato: <i>${escapeHtml(v.option_label)}</i> 
-                         <button type="button" class="danger" style="padding:2px 6px; margin-left:10px; font-size:12px;" onclick="deleteVote(${v.vote_id}, '${slug}')">Rifiuta</button>`;
+        const acceptBtn = v.status !== "accepted"
+          ? `<button type="button" class="secondary" style="padding:2px 8px; margin-left:10px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'accepted', '${slug}')">Accetta</button>`
+          : "";
+        const rejectBtn = v.status !== "rejected"
+          ? `<button type="button" class="danger" style="padding:2px 8px; margin-left:6px; font-size:12px;" onclick="setVoteStatus(${v.vote_id}, 'rejected', '${slug}')">Rifiuta</button>`
+          : "";
+        row.innerHTML = `<b>${escapeHtml(v.voter_name)}</b> ha votato <i>${escapeHtml(v.option_label)}</i>
+                         — <span>${statusLabel[v.status] || v.status}</span>
+                         ${acceptBtn}${rejectBtn}`;
         votesContainer.appendChild(row);
       });
+
+      if (noVotes.length > 0) {
+        const noBox = document.createElement("div");
+        noBox.style.marginTop = "14px";
+        noBox.style.color = "#666";
+        noBox.innerHTML = `<b>Hanno risposto No:</b> ${noVotes.map(v => escapeHtml(v.voter_name)).join(", ")}`;
+        votesContainer.appendChild(noBox);
+      }
     }
   } else {
     document.getElementById("poll-toggle").checked = false;
     document.getElementById("poll-fields").style.display = "none";
-    addOptionRow();
-    addOptionRow();
   }
 
   document.getElementById("submit-btn").textContent = "Salva modifiche";
@@ -293,15 +292,23 @@ async function deleteEvent(id) {
   }
 }
 
-window.deleteVote = async function(voteId, slug) {
-  if (!confirm("Vuoi rifiutare e annullare questo voto?")) return;
+window.setVoteStatus = async function(voteId, status, slug) {
+  const messages = {
+    accepted: "Confermi di voler accettare questa partecipazione? Il nome verrà aggiunto ai partecipanti.",
+    rejected: "Confermi di voler rifiutare questa partecipazione? Il nome NON verrà aggiunto (o verrà rimosso se già aggiunto).",
+  };
+  if (messages[status] && !confirm(messages[status])) return;
   try {
-    const res = await fetch(`/api/admin/votes/${voteId}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error("Errore");
-    showToast("Voto rimosso con successo");
-    startEdit(editingId, slug); 
-  } catch(e) {
-    showToast("Errore durante l'eliminazione");
+    const res = await fetch(`/api/admin/votes/${voteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showToast(status === "accepted" ? "Partecipante aggiunto" : "Richiesta rifiutata");
+    startEdit(editingId, slug);
+  } catch (e) {
+    showToast("Errore durante l'aggiornamento del voto");
   }
 }
 

@@ -1,4 +1,6 @@
 // functions/api/admin/events/[id].js
+const POLL_OPTIONS = ["Sì", "No", "Forse"]; // opzioni standard per tutti i sondaggi
+
 export async function onRequestPut({ params, request, env }) {
   try {
     const body = await request.json().catch(() => null);
@@ -53,10 +55,10 @@ export async function onRequestPut({ params, request, env }) {
       .bind(params.id)
       .first();
 
-    const options = poll && Array.isArray(poll.options) ? poll.options.map((o) => o.trim()).filter(Boolean) : [];
-    const wantsPoll = poll && poll.question && poll.deadline && options.length >= 2;
+    const wantsPoll = poll && poll.question && poll.deadline;
 
     if (wantsPoll) {
+      const options = POLL_OPTIONS; // opzioni standard, non modificabili
       let pollId = existingPoll ? existingPoll.id : crypto.randomUUID();
       if (existingPoll) {
         statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(pollId));
