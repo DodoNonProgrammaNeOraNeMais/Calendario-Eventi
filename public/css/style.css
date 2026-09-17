@@ -688,70 +688,9 @@ html.theme-foliage {
   --slate: #6b5847;
 }
 
-/* In ottobre le montagne di sfondo lasciano spazio all'effetto foliage */
+/* In ottobre le montagne di sfondo lasciano spazio alle foglie che cadono */
 html.theme-foliage body::after { display: none !important; }
 
-/* Interruttore: mette in pausa TUTTO l'effetto (foglie, sfondo, ecc.)
-   senza smontare il DOM, così riattivarlo è istantaneo. */
-html.foliage-paused .leaves-layer,
-html.foliage-paused .foliage-bg-fx {
-  display: none !important;
-}
-
-/* ---------- Livello di sfondo statico/lento: nebbiolina, vignettatura,
-   raggi di sole, rametti agli angoli. Dietro alle foglie (z-index -3),
-   quasi tutto statico o con animazioni di sola opacità: costo minimo. */
-.foliage-bg-fx {
-  position: fixed;
-  inset: 0;
-  z-index: -3;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.foliage-fog {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 40vh;
-  background: radial-gradient(ellipse at 50% 100%, rgba(255, 236, 205, .55) 0%, rgba(255, 236, 205, 0) 70%);
-  animation: foliage-fog-breathe 16s ease-in-out infinite;
-}
-
-@keyframes foliage-fog-breathe {
-  0%, 100% { opacity: .5; }
-  50%      { opacity: .85; }
-}
-
-.foliage-vignette {
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 170px 60px rgba(120, 70, 25, .22);
-}
-
-.foliage-rays {
-  position: absolute;
-  inset: -20%;
-  background: repeating-linear-gradient(115deg, rgba(255, 214, 140, .14) 0 40px, transparent 40px 140px);
-  mix-blend-mode: screen;
-  animation: foliage-rays-shift 20s ease-in-out infinite;
-}
-
-@keyframes foliage-rays-shift {
-  0%, 100% { opacity: .3; }
-  50%      { opacity: .55; }
-}
-
-.foliage-branch {
-  position: absolute;
-  width: 130px;
-  height: 130px;
-  opacity: .45;
-}
-.foliage-branch.top-left { top: -16px; left: -16px; }
-.foliage-branch.top-right { top: -16px; right: -16px; transform: scaleX(-1); }
-.foliage-branch svg { display: block; width: 100%; height: 100%; }
-
-/* ---------- Livello principale: foglie, ghiande, samare, uccelli. ---- */
 .leaves-layer {
   position: fixed;
   inset: 0;
@@ -761,9 +700,8 @@ html.foliage-paused .foliage-bg-fx {
   contain: strict;
 }
 
-/* Foglie: caduta + oscillazione su due elementi separati (solo
-   "transform"), più una spinta laterale opzionale --wind pilotata dal
-   mouse, sommata via calc() senza mai toccare il layout. */
+/* Caduta e oscillazione su due elementi separati, solo "transform"
+   (compositor-only, nessun layout thrashing). */
 .leaf {
   position: absolute;
   top: -8vh;
@@ -790,9 +728,9 @@ html.foliage-paused .foliage-bg-fx {
 }
 
 @keyframes leaf-fall {
-  0%   { transform: translate(var(--wind, 0px), 0) rotate(var(--rot-start, 0deg)); opacity: .95; }
-  92%  { transform: translate(calc(var(--drift, 40px) + var(--wind, 0px)), 108vh) rotate(var(--rot-end, 300deg)); opacity: .88; }
-  100% { transform: translate(calc(var(--drift, 40px) + var(--wind, 0px)), 112vh) rotate(var(--rot-end, 300deg)); opacity: 0; }
+  0%   { transform: translate(0, 0) rotate(var(--rot-start, 0deg)); opacity: .95; }
+  92%  { transform: translate(var(--drift, 40px), 108vh) rotate(var(--rot-end, 300deg)); opacity: .88; }
+  100% { transform: translate(var(--drift, 40px), 112vh) rotate(var(--rot-end, 300deg)); opacity: 0; }
 }
 
 @keyframes leaf-sway {
@@ -800,102 +738,9 @@ html.foliage-paused .foliage-bg-fx {
   50%      { transform: translateX(14px); }
 }
 
-/* Ghiande: più piccole e pesanti di una foglia, cadono più dritte. */
-.acorn {
-  position: absolute;
-  top: -8vh;
-  width: var(--nut-size, 14px);
-  height: var(--nut-size, 14px);
-  opacity: .95;
-  animation: chestnut-fall linear infinite;
-  will-change: transform;
-}
-.acorn svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .2));
-}
-
-@keyframes chestnut-fall {
-  0%   { transform: translate(0, 0) rotate(var(--rot-start, 0deg)); opacity: .95; }
-  92%  { transform: translate(var(--drift, 20px), 108vh) rotate(var(--rot-end, 720deg)); opacity: .9; }
-  100% { transform: translate(var(--drift, 20px), 112vh) rotate(var(--rot-end, 720deg)); opacity: 0; }
-}
-
-/* Samare (i "semi ad elica" dell'acero): cadono lente, ruotando su se
-   stesse come un'elichetta, con una deriva orizzontale più ampia. */
-.samara {
-  position: absolute;
-  top: -8vh;
-  width: var(--sam-w, 10px);
-  height: var(--sam-h, 26px);
-  opacity: .9;
-  animation: samara-fall linear infinite;
-  will-change: transform;
-}
-.samara svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .15));
-}
-
-@keyframes samara-fall {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: .95; }
-  100% { transform: translate(var(--drift, 60px), 112vh) rotate(var(--spins, 1080deg)); opacity: 0; }
-}
-
-/* Uccelli migratori: comparsa rara, un solo passaggio, non in loop. */
-.bird {
-  position: absolute;
-  top: 6vh;
-  width: 46px;
-  height: 18px;
-  opacity: .55;
-  animation: bird-fly linear forwards;
-  will-change: transform;
-}
-.bird .bird-wing {
-  width: 100%;
-  height: 100%;
-  animation: bird-flap ease-in-out infinite;
-}
-.bird svg { display: block; width: 100%; height: 100%; }
-
-@keyframes bird-fly {
-  0%   { transform: translate(-10vw, 0); }
-  100% { transform: translate(110vw, var(--bird-drift, 6vh)); }
-}
-@keyframes bird-flap {
-  0%, 100% { transform: scaleY(1); }
-  50%      { transform: scaleY(.55); }
-}
-
-/* Badge/toggle in topbar per disattivare l'effetto a piacere. */
-.foliage-toggle {
-  padding: .4em .9em;
-  font-size: .85rem;
-  background: var(--stone-light);
-  color: var(--ink);
-  border: 1.5px solid var(--border);
-  box-shadow: none;
-}
-.foliage-toggle:hover {
-  background: var(--stone);
-  color: var(--pine-dark);
-}
-.foliage-toggle-fallback {
-  position: fixed;
-  top: .85rem;
-  right: 1.5rem;
-  z-index: 45;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .leaf, .acorn, .samara, .bird { animation: none; opacity: .35; }
-  .leaf .leaf-sway, .bird .bird-wing { animation: none; }
-  .foliage-fog, .foliage-rays { animation: none; }
+  .leaf { animation: none; top: 8%; opacity: .35; }
+  .leaf .leaf-sway { animation: none; }
 }
 
 /* Accessibilità */
