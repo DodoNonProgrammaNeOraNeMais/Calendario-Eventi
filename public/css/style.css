@@ -691,23 +691,33 @@ html.theme-foliage {
 /* In ottobre le montagne di sfondo lasciano spazio alle foglie che cadono */
 html.theme-foliage body::after { display: none !important; }
 
-/* UNICO livello per tutto l'effetto foliage: foglie che cadono, tappeto
-   di base e cumuli sono tutti figli diretti di .leaves-layer. */
+/* Unico livello, ma isolato dal resto della pagina: "contain: strict"
+   dice al browser che nulla qui dentro influenza il layout/paint fuori,
+   così i reflow restano confinati e più leggeri. */
 .leaves-layer {
   position: fixed;
   inset: 0;
   z-index: -2;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
 }
 
+/* ---------- Foglie che cadono: caduta e oscillazione separate su due elementi, entrambe animate solo con "transform" (compositor-only, niente layout thrashing anche con molte foglie in contemporanea). ---- */
 .leaf {
   position: absolute;
   top: -8vh;
-  opacity: .88;
-  animation-name: leaf-fall, leaf-sway;
-  animation-timing-function: linear, ease-in-out;
-  animation-iteration-count: infinite, infinite;
+  width: var(--leaf-size, 20px);
+  height: var(--leaf-size, 20px);
+  opacity: .9;
+  animation: leaf-fall linear infinite;
+  will-change: transform;
+}
+
+.leaf .leaf-sway {
+  width: 100%;
+  height: 100%;
+  animation: leaf-sway ease-in-out infinite;
   will-change: transform;
 }
 
@@ -720,21 +730,30 @@ html.theme-foliage body::after { display: none !important; }
 }
 
 @keyframes leaf-fall {
-  0%   { transform: translateY(0)      translateX(0)                 rotate(var(--rot-start, 0deg)); opacity: .95; }
-  92%  { transform: translateY(108vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: .88; }
-  100% { transform: translateY(112vh)  translateX(var(--drift, 40px)) rotate(var(--rot-end, 300deg)); opacity: 0; }
+  0%   { transform: translate(0, 0) rotate(var(--rot-start, 0deg)); opacity: .95; }
+  92%  { transform: translate(var(--drift, 40px), 108vh) rotate(var(--rot-end, 300deg)); opacity: .88; }
+  100% { transform: translate(var(--drift, 40px), 112vh) rotate(var(--rot-end, 300deg)); opacity: 0; }
 }
 
 @keyframes leaf-sway {
-  0%, 100% { margin-left: 0; }
-  50%      { margin-left: 14px; }
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(14px); }
 }
 
-/* Foglie a terra: sia il tappeto di base fitto, sia i 3 cumuli grandi. */
+/* ---------- Tappeto di base: una sola banda sfumata (un solo paint) che dà corpo e ombra, sopra la quale poggiano due file sfalsate di foglie vere per la texture. Il risultato legge come un tappeto pieno invece di una fila di puntini. Bordo superiore frastagliato via mask. */
+.leaf-carpet-base {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 34px;
+  background: linear-gradient(to top, rgba(122, 74, 34, .5), rgba(122, 74, 34, 0) 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 45%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, #000 45%, transparent 100%);
+}
+
 .leaf-pile {
   position: absolute;
   bottom: 0;
-  opacity: .9;
+  opacity: .92;
   animation: leaf-pile-settle .5s ease-out forwards;
 }
 
@@ -742,8 +761,10 @@ html.theme-foliage body::after { display: none !important; }
   animation: none;
 }
 
+/* La foglia del tappeto di base non ha bisogno di will-change: è statica dopo l'assestamento, quindi non deve tenere un layer di compositing
+   dedicato a vita. */
 .leaf-pile--base {
-  opacity: .82;
+  opacity: .85;
 }
 
 .leaf-pile svg {
@@ -754,12 +775,24 @@ html.theme-foliage body::after { display: none !important; }
 }
 
 @keyframes leaf-pile-settle {
-  0%   { transform: translateY(-18px) rotate(0deg); opacity: 0; }
-  100% { transform: translateY(0)     rotate(var(--settle-rot, 0deg)); opacity: .9; }
+  0%   { transform: translateY(-16px) rotate(0deg); opacity: 0; }
+  100% { transform: translateY(0) rotate(var(--settle-rot, 0deg)); opacity: .92; }
+}
+
+/* ---------- Ombra di ancoraggio per i 3 cumuli: senza questa, i cumuli sembrano "fluttuare" a mezz'aria invece di poggiare a terra. ---- */
+.leaf-pile-shadow {
+  position: absolute;
+  bottom: -6px;
+  width: 220px;
+  height: 60px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(90, 55, 25, .38) 0%, rgba(90, 55, 25, 0) 72%);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .leaf { animation: none; top: 8%; opacity: .35; }
+  .leaf .leaf-sway { animation: none; }
   .leaf-pile { animation: none; }
 }
 
