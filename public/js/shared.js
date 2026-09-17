@@ -246,14 +246,22 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
           }),
         });
         if (!res.ok) throw new Error(await res.text());
+        
+        // Voto completato con successo
         onVoteChange && onVoteChange();
       } catch (e) {
         showToast("Non e' stato possibile registrare il voto");
         btn.disabled = false;
-        if (turnstileWidgetId !== null) turnstile.reset(turnstileWidgetId);
+      } finally {
+        // ASSICURA IL RESET DEL WIDGET IN OGNI CASO (SUCCESSO O ERRORE)
+        if (turnstileWidgetId !== null && window.turnstile) {
+          try {
+            turnstile.reset(turnstileWidgetId);
+          } catch (resetErr) {
+            console.error("Errore reset Turnstile:", resetErr);
+          }
+        }
       }
-    });
-  });
 
   const removeBtn = wrap.querySelector("[data-remove-vote]");
   if (removeBtn) {
