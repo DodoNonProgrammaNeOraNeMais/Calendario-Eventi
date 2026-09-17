@@ -36,9 +36,9 @@ export async function onRequestPut({ params, request, env }) {
       ).bind(title, description || "", start_date, end_date, image_key || null, params.id)
     );
 
-    // Sostituzione partecipanti
+    // Gestione partecipanti manuali (cancella solo quelli inseriti manualmente, preservando quelli approvati dai voti)
     statements.push(
-      env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id)
+      env.DB.prepare(`DELETE FROM participants WHERE event_id = ? AND vote_id IS NULL`).bind(params.id)
     );
 
     if (Array.isArray(participants) && participants.length) {
@@ -58,27 +58,27 @@ export async function onRequestPut({ params, request, env }) {
     const wantsPoll = poll && poll.question && poll.deadline;
 
     if (wantsPoll) {
-      const options = POLL_OPTIONS; // opzioni standard, non modificabili
-      let pollId = existingPoll ? existingPoll.id : crypto.randomUUID();
       if (existingPoll) {
-        statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(pollId));
+        // AGGIORNA SOLO DOMANDA E SCADENZA: SENZA CANCELLARE OPZIONI E VOTI!
         statements.push(
           env.DB.prepare(`UPDATE polls SET question = ?, deadline = ? WHERE id = ?`)
-            .bind(poll.question, poll.deadline, pollId)
+            .bind(poll.question, poll.deadline, existingPoll.id)
         );
-        statements.push(env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(pollId));
       } else {
+        // CREA UN NUOVO SONDAGGIO E LE SUE OPZIONI SOLO SE PRIMA NON ESISTEVA
+        const pollId = crypto.randomUUID();
         statements.push(
           env.DB.prepare(`INSERT INTO polls (id, event_id, question, deadline) VALUES (?, ?, ?, ?)`)
             .bind(pollId, params.id, poll.question, poll.deadline)
         );
-      }
-      for (const label of options) {
-        statements.push(
-          env.DB.prepare(`INSERT INTO poll_options (poll_id, label) VALUES (?, ?)`).bind(pollId, label)
-        );
+        for (const label of POLL_OPTIONS) {
+          statements.push(
+            env.DB.prepare(`INSERT INTO poll_options (poll_id, label) VALUES (?, ?)`).bind(pollId, label)
+          );
+        }
       }
     } else if (existingPoll) {
+      // Se l'admin sceglie di rimuovere il sondaggio, cancella voti, opzioni e sondaggio
       statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(existingPoll.id));
       statements.push(env.DB.prepare(`DELETE FROM poll_options WHERE poll_id = ?`).bind(existingPoll.id));
       statements.push(env.DB.prepare(`DELETE FROM polls WHERE id = ?`).bind(existingPoll.id));
@@ -111,9 +111,7 @@ export async function onRequestDelete({ params, env }) {
       .bind(params.id)
       .first();
 
-        const statements = [];
-    // I partecipanti vanno cancellati PRIMA dei voti: alcuni sono collegati a un voto (vote_id)
-    // e cancellare il voto mentre il collegamento esiste ancora viola il vincolo di integrità.
+    const statements = [];
     statements.push(env.DB.prepare(`DELETE FROM participants WHERE event_id = ?`).bind(params.id));
     if (poll) {
       statements.push(env.DB.prepare(`DELETE FROM votes WHERE poll_id = ?`).bind(poll.id));
