@@ -18,18 +18,25 @@ necessario (vedi la sezione sui link).
 public/                  sito statico servito da Cloudflare Pages
   index.html              calendario + vista "prossimi eventi"
   admin.html              pannello di creazione/modifica eventi
-  css/style.css
-  js/shared.js            funzioni condivise (date, dettaglio evento, voto)
-  js/app.js                logica della home pubblica
-  js/event.js               logica della pagina di un singolo evento
-  js/admin.js                logica del pannello admin
+  css/
+    style.css              base + layout comuni (senza temi stagionali)
+    themes/
+      foliage.css            tema di ottobre, caricato solo se attivo
+  js/
+    shared.js               funzioni condivise (date, dettaglio evento, voto)
+    theme.js                 loader dei temi stagionali (sempre caricato, leggero)
+    themes/
+      foliage.js               foglie cadenti, caricato solo se il tema è attivo
+    app.js                   logica della home pubblica
+    event.js                  logica della pagina di un singolo evento
+    admin.js                   logica del pannello admin
 
 functions/                API e pagine dinamiche (Cloudflare Pages Functions)
   api/events/               elenco e dettaglio eventi (pubblico)
   api/images/[key].js        serve le immagini da R2 (pubblico)
-  api/votes/index.js         vota / ritira voto (pubblico)
+  api/votes/index.js         vota / ritira voto (pubblico, con rate limit)
   api/admin/events/          crea / modifica / elimina evento (protetto)
-  api/admin/upload.js         carica immagine su R2 (protetto)
+  api/admin/upload.js         carica immagine su R2 (protetto, con rate limit)
   evento/[slug].js            pagina evento condivisibile con anteprima social
 
 schema.sql                schema del database D1
@@ -113,6 +120,58 @@ incollato su WhatsApp, Telegram, iMessage, ecc., l'app mostra in automatico
 un'anteprima con foto e titolo, invece del solo URL grezzo. Per questo
 conviene sempre caricare un'immagine quando si crea un evento.
 
+## Temi stagionali
+
+Ogni mese può avere un tema visivo dedicato (es. "foliage" per ottobre): CSS
+e JS del tema vivono in file separati e vengono caricati **solo quando il
+tema è attivo**, quindi non pesano sugli altri mesi dell'anno.
+
+- `public/js/theme.js` — decide, in base al mese corrente, se attivare un
+  tema e carica dinamicamente `css/themes/<nome>.css` e (se presente)
+  `js/themes/<nome>.js`.
+- `public/css/themes/<nome>.css` — variabili colore e stili decorativi
+  specifici del tema.
+- `public/js/themes/<nome>.js` — eventuali elementi decorativi (es. le
+  foglie cadenti di ottobre). Facoltativo.
+
+### Aggiungere un nuovo tema mensile
+
+1. Aggiungere una riga in `SEASONAL_THEMES` dentro `public/js/theme.js`,
+   es. `11: "natale"` (mese 0-based: 0 = gennaio, 11 = dicembre).
+2. Creare `public/css/themes/<nome>.css` con le variabili da sovrascrivere
+   sotto `html.theme-<nome>`.
+3. (Opzionale) Creare `public/js/themes/<nome>.js` per elementi decorativi.
+
+Nessun'altra modifica al codice esistente è necessaria.
+
+### Testare un tema in anticipo
+
+Aggiungere `?theme=<nome>` all'URL, es. `?theme=foliage`. La scelta resta
+attiva per tutta la sessione del browser (non serve ripetere il parametro su
+ogni pagina). `?theme=none` disattiva forzatamente qualunque tema;
+`?theme=auto` torna alla scelta automatica in base alla data.
+
+Il mese/anno usato per decidere il tema è quello del dispositivo del
+visitatore (data e ora locali del browser), non dell'orologio del server —
+scelta adeguata per un effetto puramente estetico come questo.
+
+## Sicurezza
+
+- **Area admin**: protetta da Cloudflare Access (vedi sezione 5), non da
+  codice nell'app — se cambi dominio o crei ambienti di preview, verifica
+  che la policy Access li copra.
+- **Rate limiting**: gli endpoint pubblici/di scrittura più esposti
+  (`POST`/`DELETE /api/votes`, `POST /api/admin/upload`) sono limitati a 20
+  richieste al minuto per IP tramite il binding `RATE_LIMITER` dichiarato in
+  `wrangler.toml`. Oltre la soglia rispondono `429`.
+- **Errori**: nessun endpoint restituisce stack trace o dettagli interni al
+  client in caso di errore 500 — solo un messaggio generico. Il dettaglio
+  va nei log, consultabili con:
+
+  ```bash
+  npx wrangler pages deployment tail --project-name=calendario-eventi
+  ```
+
 ## Limiti del piano gratuito (indicativi, settembre 2026)
 
 | Servizio | Limite gratuito |
@@ -132,3 +191,8 @@ numeri sono ampiamente sufficienti.
 - Notifica email automatica ai partecipanti quando viene creato o modificato
   un evento.
 - Più admin con ruoli diversi (gestito comunque da Cloudflare Access).
+- Rate limiting anche su `/api/admin/events/*` e `/api/admin/votes/*`, come
+  seconda linea di difesa oltre a Cloudflare Access.
+- Verifica che le *preview deployment* di Cloudflare Pages (URL diversi da
+  quello di produzione, generati per ogni branch/commit) siano coperte
+  dalla stessa policy Access, o disabilitate se non servono.
