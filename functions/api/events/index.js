@@ -30,9 +30,7 @@ export async function onRequestGet({ request, env }) {
       }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    console.error("GET /api/events failed:", err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }

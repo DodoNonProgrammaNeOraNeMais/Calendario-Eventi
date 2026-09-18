@@ -58,7 +58,8 @@ export async function onRequestPatch({ params, request, env }) {
     await env.DB.batch(statements);
     return Response.json({ ok: true });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error(`PATCH /api/admin/votes/${voteId} failed:`, err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }
 
@@ -71,6 +72,7 @@ export async function onRequestDelete({ params, env }) {
     ]);
     return Response.json({ success: true });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error(`DELETE /api/admin/votes/${voteId} failed:`, err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }

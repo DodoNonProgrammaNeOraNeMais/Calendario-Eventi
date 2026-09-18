@@ -1,5 +1,13 @@
 // functions/api/admin/upload.js
 export async function onRequestPost({ request, env }) {
+  if (env.RATE_LIMITER) {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const { success } = await env.RATE_LIMITER.limit({ key: `upload:${ip}` });
+    if (!success) {
+      return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+    }
+  }
+
   const formData = await request.formData().catch(() => null);
   const file = formData ? formData.get("image") : null;
 
