@@ -1,0 +1,84 @@
+/* ============================================================
+   TEMA STAGIONALE "FOLIAGE" (ottobre)
+   Caricato dinamicamente da /js/theme.js SOLO quando il tema è
+   attivo: non pesa sugli altri 11 mesi dell'anno.
+   ============================================================== */
+
+html.theme-foliage {
+  --pine: #b5541f;
+  --pine-dark: #8a3d15;
+  --pine-soft: #f6e2ce;
+  --wood: #c98a2c;
+  --wood-dark: #96631c;
+  --success: #7a6a1f;
+  --success-soft: #eee7cf;
+  --danger: #a83232;
+  --danger-dark: #7f2424;
+  --danger-soft: #f3d9d3;
+  --bg: #f6ede1;
+  --card: #fdf6ec;
+  --card-strong: #fffaf1;
+  --stone: #e8d9c3;
+  --stone-light: #f2e6d4;
+  --sand: #e3c9a0;
+  --border: #e0cbab;
+  --ink: #3a2c22;
+  --ink-soft: #7a6555;
+  --rock: #a8926f;
+  --slate: #6b5847;
+}
+
+/* In ottobre le montagne di sfondo lasciano spazio alle foglie che cadono */
+html.theme-foliage body::after { display: none !important; }
+
+.leaves-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+/* Caduta e oscillazione su due elementi separati, solo "transform"
+   (compositor-only, nessun layout thrashing). */
+.leaf {
+  position: absolute;
+  top: -8vh;
+  width: var(--leaf-size, 20px);
+  height: var(--leaf-size, 20px);
+  opacity: .9;
+  animation: leaf-fall linear infinite;
+  will-change: transform;
+}
+
+.leaf .leaf-sway {
+  width: 100%;
+  height: 100%;
+  animation: leaf-sway ease-in-out infinite;
+  will-change: transform;
+}
+
+.leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(var(--flip, 1));
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .16));
+}
+
+@keyframes leaf-fall {
+  0%   { transform: translate(0, 0) rotate(var(--rot-start, 0deg)); opacity: .95; }
+  92%  { transform: translate(var(--drift, 40px), 108vh) rotate(var(--rot-end, 300deg)); opacity: .88; }
+  100% { transform: translate(var(--drift, 40px), 112vh) rotate(var(--rot-end, 300deg)); opacity: 0; }
+}
+
+@keyframes leaf-sway {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(14px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf { animation: none; top: 8%; opacity: .35; }
+  .leaf .leaf-sway { animation: none; }
+}
