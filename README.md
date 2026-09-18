@@ -193,6 +193,3 @@ numeri sono ampiamente sufficienti.
 - Più admin con ruoli diversi (gestito comunque da Cloudflare Access).
 - Rate limiting anche su `/api/admin/events/*` e `/api/admin/votes/*`, come
   seconda linea di difesa oltre a Cloudflare Access.
-- Verifica che le *preview deployment* di Cloudflare Pages (URL diversi da
-  quello di produzione, generati per ogni branch/commit) siano coperte
-  dalla stessa policy Access, o disabilitate se non servono.
