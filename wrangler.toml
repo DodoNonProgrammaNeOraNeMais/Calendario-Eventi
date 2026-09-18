@@ -13,6 +13,5 @@ bucket_name = "calendario-eventi-immagini"
 
 [[ratelimits]]
 name = "RATE_LIMITER"
-type = "ratelimit"
-namespace_id = "1001" 
-simple = { limit = 20, period = 60 } 
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

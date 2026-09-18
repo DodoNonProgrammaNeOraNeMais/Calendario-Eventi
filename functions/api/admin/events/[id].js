@@ -89,10 +89,8 @@ export async function onRequestPut({ params, request, env }) {
 
     return Response.json({ ok: true });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error(`PUT /api/admin/events/${params.id} failed:`, err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }
 
@@ -126,9 +124,7 @@ export async function onRequestDelete({ params, env }) {
 
     return Response.json({ ok: true });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error(`DELETE /api/admin/events/${params.id} failed:`, err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }

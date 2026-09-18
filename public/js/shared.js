@@ -1,5 +1,8 @@
 const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 
+// La logica del tema stagionale attivo (es. "foliage" di ottobre) vive in
+// /js/theme.js, caricato prima di questo file in ogni pagina.
+
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 

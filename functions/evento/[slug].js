@@ -33,6 +33,7 @@ ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ""}
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="stylesheet" href="/css/style.css">
+<script src="/js/theme.js"></script>
 </head>
 <body>
 <div id="app" data-slug="${escapeHtml(params.slug)}"></div>

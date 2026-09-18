@@ -18,7 +18,14 @@ async function verifyTurnstile(token, ip, secret) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const ip = request.headers.get("CF-Connecting-IP");
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+
+  if (env.RATE_LIMITER) {
+    const { success } = await env.RATE_LIMITER.limit({ key: `votes-post:${ip}` });
+    if (!success) {
+      return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+    }
+  }
 
   const body = await request.json().catch(() => null);
   if (!body || !body.pollId || !body.optionId) {
@@ -78,6 +85,15 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+
+  if (env.RATE_LIMITER) {
+    const { success } = await env.RATE_LIMITER.limit({ key: `votes-delete:${ip}` });
+    if (!success) {
+      return new Response("Troppe richieste, riprova tra un minuto", { status: 429 });
+    }
+  }
+
   const url = new URL(request.url);
   const pollId = url.searchParams.get("pollId");
   if (!pollId) return new Response("pollId mancante", { status: 400 });

@@ -51,9 +51,7 @@ export async function onRequestPost({ request, env }) {
 
     return Response.json({ ok: true, id, slug });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("POST /api/admin/events failed:", err);
+    return Response.json({ error: "Errore interno, riprova." }, { status: 500 });
   }
 }
