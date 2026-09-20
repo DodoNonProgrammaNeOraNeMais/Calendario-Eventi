@@ -37,7 +37,7 @@ ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ""}
 </head>
 <body>
 <div id="app" data-slug="${escapeHtml(params.slug)}"></div>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
 <script src="/js/shared.js"></script>
 <script src="/js/event.js" defer></script>
 </body>
