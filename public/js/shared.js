@@ -3,6 +3,18 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAE6Lq28pasbDlduE";
 // La logica del tema stagionale attivo (es. "foliage" di ottobre) vive in
 // /js/theme.js, caricato prima di questo file in ogni pagina.
 
+function waitForTurnstile(onReady, attemptsLeft = 100) {
+  if (window.turnstile) {
+    onReady();
+    return;
+  }
+  if (attemptsLeft <= 0) {
+    console.error("Turnstile non si e' caricato in tempo utile.");
+    return;
+  }
+  setTimeout(() => waitForTurnstile(onReady, attemptsLeft - 1), 150);
+}
+
 const MESI_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const GIORNI_SETTIMANA = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
 
@@ -168,11 +180,13 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
 
   let turnstileWidgetId = null;
   const turnstileContainer = wrap.querySelector(".turnstile-container");
-  if (turnstileContainer && window.turnstile) {
-    setTimeout(() => {
+  if (turnstileContainer) {
+    turnstileContainer.textContent = "Caricamento verifica anti-spam…";
+    waitForTurnstile(() => {
       try {
         turnstile.ready(() => {
           try {
+            turnstileContainer.textContent = "";
             turnstileWidgetId = turnstile.render(turnstileContainer, {
               sitekey: TURNSTILE_SITE_KEY,
               theme: "light",
@@ -184,7 +198,7 @@ function renderEventDetail(event, onVoteChange, { showClose = true } = {}) {
       } catch (e) {
         console.error("Turnstile ready error:", e);
       }
-    }, 0);
+    });
   }
 
   const coverImg = wrap.querySelector("img.cover");
